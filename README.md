@@ -74,7 +74,8 @@ To start a measurement, simply press start.
 For help, contact enandayapa@gmail.com
 
 ## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+The program is mostly on a finished state, other than fixing some bugs. 
+Please contact us if you find any issues
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
