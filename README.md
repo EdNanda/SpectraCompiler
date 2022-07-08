@@ -11,7 +11,14 @@ Furthermore, one can add a large amount of relevant metadata for future automate
 ## Installation
 Install the official Ocean Optics [drivers] (https://www.oceaninsight.com/products/software/)
 
-Install the following libraries if using anaconda
+Install the libraries shown in the requirements.txt, by
+
+```bash
+pip install pyqt=5.12.3
+pip install seabreeze
+```
+
+or if using anaconda
 
 ```bash
 conda install -c anaconda pyqt=5.12.3
@@ -36,7 +43,8 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 Please make sure to update tests as appropriate.
 
 ## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+All programming was done by Edgar Nandayapa B.
+Field testing has been done by C. Rehermann and F. Mathies.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
