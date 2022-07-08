@@ -27,8 +27,8 @@ To start a measurement, simply press start.
 For help, contact enandayapa@gmail.com
 
 ## Roadmap
-The program is mostly on a finished state, other than fixing some bugs. 
-Please contact us if you find any issues
+The program is mostly on a finished state, albeit some small bugs that need fixing. 
+Please contact us if you find any new issues.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
