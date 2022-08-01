@@ -382,6 +382,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BBrightDel.clicked.connect(self.delete_bright_measurement)
         self.BDarkDel.clicked.connect(self.delete_dark_measurement)
 
+    @pyqtSlot()
     def select_folder(self):
         old_folder = self.LEfolder.text()  ##Read entry line
 
@@ -399,6 +400,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         ## Arrow function, to create folderpath with User and Date
 
+    @pyqtSlot()
     def automatic_folder(self):
         user = self.LEuser.text()
         folder = self.LEfolder.text()
@@ -442,6 +444,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             pass
 
+    @pyqtSlot()
     def save_meta(self):
         self.create_folder(False)
         self.gather_all_metadata()
@@ -449,6 +452,7 @@ class MainWindow(QtWidgets.QMainWindow):
         metadata.to_csv(self.folder + "metadata.csv", header=False)
         self.statusBar().showMessage("Metadata file saved successfully", 5000)
 
+    @pyqtSlot()
     def load_meta(self):
         folder = self.LEfolder.text()
         metafile = QtWidgets.QFileDialog.getOpenFileName(self, "Choose your metadata file", folder)
@@ -515,7 +519,8 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             self.LEskip.setText("1")
 
-    ## To update the field with total number of measurement frames 
+    ## To update the field with total number of measurement frames
+    @pyqtSlot()
     def update_number_of_frames(self):
         try:
             total_time = float(self.LEmeatime.text())
@@ -541,11 +546,13 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(100):
             self.arr_scrbar.append(round(np.exp(i * (factor + np.log(max_val)) / max_bar) - 1 + min_val, 2))
 
+    @pyqtSlot()
     def scrollbar_action(self):
         bar = self.SBinttime.value()  ##Read scrollbar value
         self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
         self.set_integration_time()
 
+    @pyqtSlot()
     def set_integration_time(self):
         try:
             inttime = self.LEinttime.text()
@@ -661,6 +668,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 progress_callback.emit(ydata)
         return "Done!!"
 
+    @pyqtSlot()
     def dark_measurement(self):
         self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
         ## Set initial values
@@ -668,6 +676,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dark_measurement_bool = True
         self.dark_counter = 0
 
+    @pyqtSlot()
     def delete_dark_measurement(self):
         self.dark_mean = np.ones(len(self.xdata))
         self.dark_data = False
@@ -690,12 +699,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.BDarkMeas.setText("Measured")
             self.statusBar().showMessage('Measurement of dark spectra completed', 5000)
 
+    @pyqtSlot()
     def bright_measurement(self):
         self.average_cycles = int(self.LEcurave.text())
         self.bright_meas_array = np.ones((self.average_cycles, self.array_size))
         self.bright_measurement_bool = True
         self.bright_counter = 0
 
+    @pyqtSlot()
     def delete_bright_measurement(self):
         self.bright_mean = np.ones(len(self.xdata))
         self.bright_data = False
@@ -720,6 +731,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.statusBar().showMessage('Measurement of bright spectra completed', 5000)
             self.set_axis_range()
 
+    @pyqtSlot()
     def press_start(self):
         if not self.measuring:
             self.delay = float(self.LEdeltime.text())
@@ -857,6 +869,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.canvas.draw_idle()
 
+    @pyqtSlot()
     def set_axis_range(self):
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
 
