@@ -129,7 +129,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_integration_time()  ##This resets the starting integration time value
         self.button_actions()  ##Set button actions
 
-    def create_widgets(self):
+
+    def create_widgets(self): #TODO: could rename to setupUi --ashis
         widget = QWidget()
         layH1 = QHBoxLayout()  ##Main (horizontal) Layout
 
@@ -642,13 +643,20 @@ class MainWindow(QtWidgets.QMainWindow):
                     ydata[dp] = np.mean(ydata[dp - 2:dp + 2])
                 progress_callback.emit(ydata)
         except:
-            ydata = np.ones(len(self.xdata))
+            optimize = True #TODO: remove non-optimized code --ashis
+            if optimize:
+                xx = np.arange(self.array_size)
+            else:
+                ydata = np.ones(len(self.xdata))
             # for i in range(25)
             while True:
                 inttime = self.LEinttime.text()
                 sleep(float(inttime))
-                for cc, xx in enumerate(range(self.array_size)):
-                    ydata[cc] = 50000 * math.exp(-(xx - 900) ** 2 / (2 * 100000)) + random.randint(0, 10000)
+                if optimize:
+                    ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0, 10001) #result is in [start, end). hence 10001 instead of 10000
+                else:
+                    for cc, xx in enumerate(range(self.array_size)):
+                        ydata[cc] = 50000 * math.exp(-(xx - 900) ** 2 / (2 * 100000)) + random.randint(0, 10000) #result is in [start, end]
                 progress_callback.emit(ydata)
         return "Done!!"
 
@@ -918,6 +926,10 @@ class MainWindow(QtWidgets.QMainWindow):
             heatplot = self.spectra_meas_array.T[215:1455]
             waveleng = self.xdata[215:1455]
 
+        time = time[~np.isnan(time)]
+        waveleng = waveleng[~np.isnan(waveleng)]
+        heatplot = heatplot[:,:time.shape[0]]
+
         ax1.set_title("PL spectra")
         ax1.set_xlabel("Time(seconds)")
         ax1.set_ylabel("Wavelength (nm)")
@@ -930,7 +942,7 @@ class MainWindow(QtWidgets.QMainWindow):
         ax1.set_yticks(np.linspace(0, waveLen, 8))
         ax1.set_yticklabels(np.linspace(PLmin, PLmax, 8).astype(int))
         ax1.set_xticks(np.linspace(0, len(time), 8))
-        ax1.set_xticklabels(np.around(np.linspace(0, max(time), 8), decimals=1))
+        ax1.set_xticklabels(np.around(np.linspace(0, np.max(time), 8), decimals=1))
 
         ax1.pcolorfast(heatplot)
 
@@ -940,7 +952,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def send_to_Qthread(self):
         ## Create a QThread object
-        self.thread = QThread()
+        # self.thread = QThread()
         ## Create a worker object and send function to it
         self.worker = Worker(self.get_ydata)
         ## Whenever signal exists, send it to plot
@@ -952,6 +964,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def finished_plotting(self):
         self.statusBar().showMessage("Plotting process finished and images saved", 5000)
 
+
+    # TODO: funtion not called? --ashis
+    '''
     def Qthread_plotting(self, func):
         ## Create a QThread object
         self.thread = QThread()
@@ -961,11 +976,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.thread.finished.connect(self.finished_plotting)
         ## Start threadpool
         self.threadpool.start(self.worker)
+    '''
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
+        reply = True #QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
+                     #               QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == True: #QMessageBox.Yes:
             event.accept()
             # print('Window closed')
             if self.spectrometer:
