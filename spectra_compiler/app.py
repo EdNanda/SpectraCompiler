@@ -727,8 +727,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def press_start(self):
         if not self.measuring:
             self.delay = float(self.LEdeltime.text())
-            self.LEskip_positive_number()
-
+            self.LEskip.setText(utils.LEskip_positive_number(self.LEskip.text()))
             self.timer = QTimer()
             self.timer_interval = 0.1
             self.timer.setInterval(int(self.timer_interval * 1000))
