@@ -17,4 +17,5 @@ if __name__ == "__main__":
     icon_path = pathlib.Path(icon_path)
     app = QtWidgets.QApplication(sys.argv)
     w = MainWindow(icon_path)
-    app.exec_()
+    w.show()
+    sys.exit(app.exec())
