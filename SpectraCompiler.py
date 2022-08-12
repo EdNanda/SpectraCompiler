@@ -492,7 +492,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(self.start_time))
         except:
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(time()))
-        self.meta_dict["Location"] = os.environ['COMPUTERNAME']
+        self.meta_dict["Location"] = "ass"#os.environ['COMPUTERNAME']
         try:
             self.meta_dict["Device"] = (self.spec.model + " - Serial No.:" + self.spec.serial_number)
         except:

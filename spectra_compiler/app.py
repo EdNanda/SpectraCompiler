@@ -95,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
         :param kwargs:
         '''
         super(MainWindow, self).__init__(*args, **kwargs)
-        self.dark_measurement_bool = False
+        self.dark_measurement_bool = False #TODO: change bool variable naming convention --ashis
         self.bright_measurement_bool = False
         self.spectra_measurement_bool = False
         self.dark_data = False
@@ -103,6 +103,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.spectra_data = False
         self.show_raw = False
         self.measuring = False
+
+        self.dark_mean = None #TODO: add all missing variables here --ashis
+        self.bright_mean = None
+
         self.setWindowTitle("Spectra Compiler")
         self.setWindowIcon(QtGui.QIcon(str(icon_path.joinpath("rainbow.ico"))))
         np.seterr(divide='ignore', invalid='ignore')
@@ -477,6 +481,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Metadata successfully loaded", 5000)
 
     def gather_all_metadata(self):
+        print("gather_all_metadata")
         self.sample = self.LEsample.text()
         self.meta_dict = {}  ## All variables will be collected here
         ## Gather all relevant information
@@ -664,13 +669,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def dark_measurement(self):
         self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
         ## Set initial values
-        self.dark_meas_array = np.ones((self.average_cycles, self.array_size))
+        self.dark_meas_array = None # np.ones((self.average_cycles, self.array_size)) TODO: None frees memory. Introduce None check if this causes problems --ashis
         self.dark_measurement_bool = True
         self.dark_counter = 0
 
     @pyqtSlot()
     def delete_dark_measurement(self):
-        self.dark_mean = np.ones(len(self.xdata))
+        self.dark_mean = None # np.ones(len(self.xdata)) TODO: None frees memory. Introduce None check if this causes problems --ashis
         self.dark_data = False
         self.BDarkMeas.setStyleSheet("color : black;")
         self.BDarkMeas.setText("Measure (deleted)")
@@ -730,7 +735,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.LEskip.setText(utils.LEskip_positive_number(self.LEskip.text()))
             self.timer = QTimer()
             self.timer_interval = 0.1
-            self.timer.setInterval(int(self.timer_interval * 1000))
+            self.timer.setInterval(int(self.timer_interval * 1000)) # TODO: use single shot timer with delay?? --ashis
             self.timer.timeout.connect(self.delayed_start)
             self.timer.start()
         else:
@@ -738,17 +743,20 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spectra_measurement_bool = False
             self.dis_enable_widgets(False)
             self.save_data()
+            self.worker.signals.progress.disconnect(self.print_ydata)
 
     def delayed_start(self):
+        print("delyed start")
         self.LAelapse.setStyleSheet("color :red;")
         self.LAelapse.setText("00:{:02.2f}".format(float(round(self.delay, 2))))
         self.delay = self.delay - self.timer_interval
 
         if self.delay <= 0:
-            self.timer.stop()
+            self.timer.stop() # TODO: use single shot timer instead of stop?? --ashis
             self.LAelapse.setStyleSheet("color :black;")
             self.LAelapse.setText("00:00")
             self.spectra_measurement()
+            self.worker.signals.progress.connect(self.print_ydata)
         else:
             pass
 
@@ -767,8 +775,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.counter = 0
         self.array_count = 0
 
-    def gathering_spectra_counts(self):
-        skip = int(self.LEskip.text())
+    def gathering_spectra_counts(self): #TODO: CALLED MANY TIMES --migrate to new thread --ashis
+        print('gathering_spectra_counts')
+        skip = int(self.LEskip.text()) # TODO: make sure skip is non-zero --ashis
 
         if self.spectra_counter == 0:
             self.dis_enable_widgets(True)
@@ -783,9 +792,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.spectra_meas_array[self.array_count] = np.array(self.yarray)
                 self.time_meas_array[self.array_count] = np.round(time() - self.start_time, 4)
                 self.array_count += 1
-
             self.spectra_counter += 1
-
         else:
             self.time_meas_array = self.time_meas_array - self.time_meas_array[0]
             self.spectra_measurement_bool = False
@@ -793,7 +800,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.dis_enable_widgets(False)
             self.statusBar().showMessage('Measurement finished', 5000)
 
-    def spectra_math(self):
+    def spectra_math(self): #TODO: Migrate this function to utils --ashis
         if self.dark_data and not self.bright_data:
             self.yarray = (self.ydata - self.dark_mean)
         elif self.bright_data and not self.dark_data:
@@ -815,29 +822,31 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot(object)
     def plot_spectra(self, spect):
-        self.ydata = spect
+        print("plot_spectra start")
+        # self.ydata = spect #TODO: idea is to remove ydata as state variable of this class --ashis
         # print(ydata)
         ## Check if button to collect data has been pressed
         if self.dark_measurement_bool:
             self.gathering_dark_counts()
         if self.bright_measurement_bool:
             self.gathering_bright_counts()
-        if self.spectra_measurement_bool:
-            self.gathering_spectra_counts()
-            self.during_measurement()
+        #if self.spectra_measurement_bool:
+        #   self.gathering_spectra_counts()
+        #    self.during_measurement()
 
         ## Plot the data accordingly
         if self._plot_ref is None:  ## For initializing the plot
-            self.ydata = np.ones(len(self.xdata))
-            self._plot_ref, = self.canvas.axes.plot(self.xdata, self.ydata, 'r')
+            #self.ydata = np.ones(len(self.xdata)) #TODO: Why change ydata if not used anywhere? --ashis
+            #self._plot_ref, = self.canvas.axes.plot(self.xdata, self.ydata, 'r')
+            self._plot_ref, = self.canvas.axes.plot(self.xdata, np.ones(len(self.xdata)), 'r')
             if not self.spectrometer:
                 self._plot_ref.set_label("Spectrometer not found: Demo Data")
                 self.canvas.axes.legend()
             else:
-                pass
+                pass #TODO: else case really needed? --ashis
 
         else:
-            self.spectra_math()
+            yarray = utils.spectra_math(spect, self.dark_data, self.bright_data, self.dark_mean, self.bright_mean)
             ## raw button checked
             if self.Braw.isChecked():
                 if not self.show_raw:
@@ -857,9 +866,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.reset_plot()
                     self._plot_ref, = self.canvas.axes.plot(self.xdata, self.ydata, 'r')
 
-                self._plot_ref.set_ydata(self.yarray)
+                self._plot_ref.set_ydata(yarray)
 
         self.canvas.draw_idle()
+        print("plot_spectra end")
 
     @pyqtSlot()
     def set_axis_range(self):
@@ -958,6 +968,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.worker.signals.progress.connect(self.plot_spectra)
         ## Start threadpool
         self.threadpool.start(self.worker)
+
+    def print_ydata(self, ydata):
+        print("ashis start")
+        self.ydata = ydata
+        self.yarray = utils.spectra_math(ydata, self.dark_data, self.bright_data, self.dark_mean, self.bright_mean)
+        if self.spectra_measurement_bool:
+            self.gathering_spectra_counts()
+            self.during_measurement()
+        print("ashis end")
+
 
     @pyqtSlot()
     def finished_plotting(self):
