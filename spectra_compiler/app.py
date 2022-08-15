@@ -909,7 +909,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.dis_enable_widgets(True)
             self.create_folder(True)
             self.set_integration_time()
-            self.spec_thread.start()
+            self.spec_thread.start() #TODO: increase priority --ashis
 
     def _spectra_measurement(self):  # TODO: rename to init_spectra_measurement
         self.start_time = time()  ## Start of stopwatch
@@ -1152,7 +1152,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == True:  # QMessageBox.Yes:
+        if reply == QMessageBox.Yes:
+            self.spec_thread.quit() #TODO: close threadpool too? --ashis
+            self.spec_thread.wait()
             event.accept()
             # print('Window closed')
             if self.spectrometer:
