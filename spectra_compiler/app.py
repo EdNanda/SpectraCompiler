@@ -909,7 +909,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.dis_enable_widgets(True)
             self.create_folder(True)
             self.set_integration_time()
-            self.spec_thread.start() #TODO: increase priority --ashis
+            self.spec_thread.start(QThread.HighPriority) #TODO: increase priority --ashis
+            #self.spec_thread.setPriority(QThread.HighPriority)
+
 
     def _spectra_measurement(self):  # TODO: rename to init_spectra_measurement
         self.start_time = time()  ## Start of stopwatch
