@@ -67,6 +67,57 @@ class Worker(QRunnable):
             self.signals.finished.emit()  # Done
 
 
+class Worker1(QObject):
+    finished = pyqtSignal()
+    progress = pyqtSignal(object)
+
+    def __init__(self, spec, array_size, x_data, inittime:str):
+        super(Worker1, self).__init__()
+        self.spec = spec
+        self.array_size = array_size
+        self.x_data = x_data
+        self.inttime = float(inittime)
+
+    @pyqtSlot()
+    def get_ydata(self):
+        try:
+            while True:
+                # for i in range(25):
+                ydata = self.spec.intensities()[2:]
+                if "FLMS12200" in self.spec.serial_number:
+                    dp = 1420  ##dead pixel on spectrometer @831.5nm
+                    # ydata[dp] = np.nan
+                    ydata[dp] = np.mean(ydata[dp - 2:dp + 2])
+                self.progress.emit(ydata)
+        except:
+            optimize = True  # TODO: remove non-optimized code --ashis
+            if optimize:
+                xx = np.arange(self.array_size)
+            else:
+                ydata = np.ones(len(self.xdata))
+            # for i in range(25)
+            while True:
+                sleep(self.inttime)
+                if optimize:
+                    ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0,
+                                                                                                10001)  # result is in [start, end). hence 10001 instead of 10000
+                else:
+                    for cc, xx in enumerate(range(self.array_size)):
+                        ydata[cc] = 50000 * math.exp(-(xx - 900) ** 2 / (2 * 100000)) + random.randint(0,
+                                                                                                       10000)  # result is in [start, end]
+                self.progress.emit(ydata)
+        return "Done!!"
+
+
+    @pyqtSlot(object)
+    def set_spec(self, spec):
+        self.spec = spec
+
+    @pyqtSlot(str)
+    def set_intime(self, inttime):
+        self.inttime = float(inttime)
+
+
 class Worker2(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
@@ -172,11 +223,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.dark_mean = None  # TODO: add all missing variables here --ashis
         self.bright_mean = None
-
         self.setWindowTitle("Spectra Compiler")
         self.setWindowIcon(QtGui.QIcon(str(icon_path.joinpath("rainbow.ico"))))
         np.seterr(divide='ignore', invalid='ignore')
 
+        self.spec = None
         try:
             self.spec = Spectrometer.from_first_available()
             self.spec.integration_time_micros(200000)
@@ -189,8 +240,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.xdata = np.linspace(340, 1015, self.array_size)
             self.spectrometer = False
 
-        self.threadpool = QThreadPool()
+        #self.threadpool = QThreadPool()
         self.spec_thread = QThread()
+        self.ydata_thread = QThread()
 
         self.statusBar().showMessage("Program by Edgar Nandayapa - 2021", 10000)
         # self.statusBar().showMessage("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount(),10000)
@@ -607,11 +659,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
         self.set_integration_time()
 
+
     @pyqtSlot()
     def set_integration_time(self):
         # print('set_integration_time')
         try:
             inttime = self.LEinttime.text()
+            self.yworker.set_intime(inttime)
             inttime = float(inttime.replace(',', '.'))  ## Read Entry field
         except:
             inttime = 0.1
@@ -627,7 +681,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         ## Update frames label
         self.update_number_of_frames()
-
         if self.spectrometer:
             self.spec.integration_time_micros(int(inttime * 1000000))
         else:
@@ -755,7 +808,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     ## This function is sent to the parallel Qthread
-    def get_ydata(self, progress_callback):
+    def _get_ydata(self, progress_callback):
         try:
             while True:
                 # for i in range(25):
@@ -896,7 +949,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                        dark_mean=self.dark_mean,
                                        bright_mean=self.bright_mean,
                                        timestamp=self.start_time)
-            self.worker.signals.progress.connect(self.meas_worker.run)
+            # self.worker.signals.progress.connect(self.meas_worker.run)
             self.meas_worker.moveToThread(self.spec_thread)
 
             self.meas_worker.finished.connect(self.spec_thread.quit)
@@ -1064,7 +1117,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.counter = 0
             self.measuring = False
             self.save_data()
-
         self.counter += 1
 
     @pyqtSlot(int)
@@ -1127,11 +1179,15 @@ class MainWindow(QtWidgets.QMainWindow):
         ## Create a QThread object
         # self.thread = QThread()
         ## Create a worker object and send function to it
-        self.worker = Worker(self.get_ydata)
+        # self.worker = Worker(self.get_ydata)
+        self.yworker = Worker1(self.spec, self.array_size, self.xdata, self.LEinttime.text())
+        self.yworker.moveToThread(self.ydata_thread)
         ## Whenever signal exists, send it to plot
-        self.worker.signals.progress.connect(self.plot_spectra)
+        self.yworker.progress.connect(self.plot_spectra)
+        self.ydata_thread.started.connect(self.yworker.get_ydata)
+        self.ydata_thread.start(QThread.HighPriority)
         ## Start threadpool
-        self.threadpool.start(self.worker)
+        #self.threadpool.start(self.worker)
 
 
     @pyqtSlot()
