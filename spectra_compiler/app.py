@@ -952,6 +952,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # self.worker.signals.progress.connect(self.meas_worker.run)
             self.meas_worker.moveToThread(self.spec_thread)
 
+            self.yworker.progress.connect(self.meas_worker.run)
             self.meas_worker.finished.connect(self.spec_thread.quit)
             self.meas_worker.finished.connect(self.meas_worker.deleteLater)
             # self.spec_thread.finished.connect(self.spec_thread.deleteLater)
