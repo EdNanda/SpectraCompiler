@@ -12,8 +12,6 @@ import time
 from seabreeze.spectrometers import Spectrometer
 from PyQt5.QtCore import pyqtSignal, QThread
 
-
-
 ''''
 1. Init spectormeter here...
 2. Define data generating function here... get_ydata
@@ -54,19 +52,27 @@ class SpectroProcess(Process):
             self.array_size = len(self.xdata)
             self.spec_counts = []
             self.spectrometer = True
+            print("spec found")
         except:
+            print("spec not found")
             self.array_size = 2046
             self.xdata = np.linspace(340, 1015, self.array_size)
             self.spectrometer = False
 
     def run(self):
+        def accurate_delay(delay):
+            ''' Function to provide accurate time delay in millisecond
+            '''
+            _ = time.perf_counter() + delay / 1000
+            while time.perf_counter() < _:
+                pass
+
         if self.spectrometer:
+            _DP = 1420  ##dead pixel on spectrometer @831.5nm
             while True:
                 ydata = self.spec.intensities()[2:]
                 if "FLMS12200" in self.spec.serial_number:
-                    dp = 1420  ##dead pixel on spectrometer @831.5nm
-                    # ydata[dp] = np.nan
-                    ydata[dp] = np.mean(ydata[dp - 2:dp + 2])
+                    ydata[_DP] = np.mean(ydata[_DP - 2:_DP + 2])
                     self.to_emitter.send(ydata)
                     try:
                         inttime = self.data_from_mother.get_nowait() # TODO check overhead of this call - super important!!
@@ -76,12 +82,13 @@ class SpectroProcess(Process):
         else:
             xx = np.arange(self.array_size)
             while True:
-                time.sleep(self.inttime)
+                accurate_delay(self.inttime)  # time.sleep(self.inttime)
                 ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0, 10001)  # result is in [start, end). hence 10001 instead of 10000
                 self.to_emitter.send(ydata)
                 try:
                     self.inttime = self.data_from_mother.get_nowait()
-                    print("wait time changed", self.inttime)
+                    self.inttime *= 1000 #convert to ms
+                    print("wait time changed (ms)", self.inttime)
                 except Empty:
                     pass
 
