@@ -22,7 +22,7 @@ import numpy as np
 import os
 import math
 import random
-from time import time, sleep, strftime, localtime
+from time import time, sleep, strftime, localtime, perf_counter
 from datetime import datetime
 import traceback
 import utils
@@ -33,6 +33,32 @@ import pathlib
 # size = 2046
 
 
+class PlotWorker(QObject):
+
+    def __init__(self, canvas, xdata, is_dark_data, is_bright_data, dark_mean, bright_mean):
+        super(PlotWorker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.canvas = canvas
+        self.xdata = xdata
+        self.is_dark_data = is_dark_data
+        self.is_bright_data = is_bright_data
+        self.dark_mean = dark_mean
+        self.bright_mean = bright_mean
+        self._plot_ref, = self.canvas.axes.plot(self.xdata, np.ones(len(self.xdata)), 'r')
+        self.render_buffer = None
+        self.timer = QTimer()
+        self.timer.start(500)
+        self.timer.timeout.connect(self.toggle)
+
+
+    @pyqtSlot(object)
+    def plot_spectra(self, spect):
+        self.render_buffer = spect
+
+    def toggle(self):
+        yarray = utils.spectra_math(self.render_buffer, self.is_dark_data, self.is_bright_data, self.dark_mean, self.bright_mean)
+        self._plot_ref.set_ydata(yarray)
+        self.canvas.draw_idle()
 
 
 class Worker2(QObject):
@@ -154,7 +180,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         #self.threadpool = QThreadPool()
         self.spec_thread = QThread()
-        self.ydata_thread = QThread()
+        self.plot_thread = QThread()
 
         self.statusBar().showMessage("Program by Edgar Nandayapa - 2021", 10000)
         # self.statusBar().showMessage("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount(),10000)
@@ -812,7 +838,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show_raw = False
 
     @pyqtSlot(object)
-    def plot_spectra(self, spect):
+    def _plot_spectra(self, spect):
         self.ydata = spect #TODO: idea is to remove ydata as state variable of this class --ashis
         # print(ydata)
         ## Check if button to collect data has been pressed
@@ -972,8 +998,19 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.ydata_thread.start(QThread.HighPriority)
         ## Start threadpool
         #self.threadpool.start(self.worker)
-        self.emitter.ui_data_available.connect(self.plot_spectra)
+        self.plot_worker = PlotWorker(
+            is_dark_data=self.dark_data,
+            is_bright_data=self.bright_data,
+            dark_mean=self.dark_mean,
+            bright_mean=self.bright_mean,
+            canvas= self.canvas,
+            xdata= self.xdata
+        )
 
+        # self.worker.signals.progress.connect(self.meas_worker.run)
+        self.emitter.ui_data_available.connect(self.plot_worker.plot_spectra)
+        self.plot_worker.moveToThread(self.plot_thread)
+        self.plot_thread.start()
 
     @pyqtSlot()
     def finished_plotting(self):
