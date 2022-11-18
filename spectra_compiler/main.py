@@ -37,27 +37,29 @@ class Emitter(QThread):
 
 
 class SpectroProcess(Process):
-    """ Process to capitalize a received string and return this over the pipe. """
-
     def __init__(self, to_emitter: Pipe, from_mother: Queue, inittime: str = "0.2", daemon=True):
         super().__init__()
         self.daemon = daemon
         self.to_emitter = to_emitter
         self.data_from_mother = from_mother
         self.inttime = float(inittime)
+        self.is_spectrometer = False
+        self.array_size = 2046
+        self.xdata = np.linspace(340, 1015, self.array_size)
+
+    def init_spectrometer_generator(self):
         try:
             self.spec = Spectrometer.from_first_available()
             self.spec.integration_time_micros(200000)
             self.xdata = self.spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
             self.spec_counts = []
-            self.spectrometer = True
+            self.is_spectrometer = True
             print("spec found")
         except:
             print("spec not found")
             self.array_size = 2046
             self.xdata = np.linspace(340, 1015, self.array_size)
-            self.spectrometer = False
 
     def run(self):
         def accurate_delay(delay):
@@ -67,11 +69,13 @@ class SpectroProcess(Process):
             while time.perf_counter() < _:
                 pass
 
-        if self.spectrometer:
+        self.init_spectrometer_generator()
+        if self.is_spectrometer:
             _DP = 1420  ##dead pixel on spectrometer @831.5nm
+            is_model_verified = "FLMS12200" in self.spec.serial_number
             while True:
                 ydata = self.spec.intensities()[2:]
-                if "FLMS12200" in self.spec.serial_number:
+                if is_model_verified:
                     ydata[_DP] = np.mean(ydata[_DP - 2:_DP + 2])
                     self.to_emitter.send(ydata)
                     try:
@@ -99,9 +103,8 @@ class SpectroProcess(Process):
         self.inttime = float(inttime)
 
     def close(self):
-        if self.spectrometer:
+        if self.is_spectrometer:
             self.spec.close()
-
 
 
 if __name__ == "__main__":
