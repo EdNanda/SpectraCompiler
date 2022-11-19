@@ -909,6 +909,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_worker.moveToThread(self.plot_thread)
         self.plot_thread.start()
 
+
+    def refresh_plot(self):
+        self.emitter.ui_data_available.disconnect(self.plot_worker.plot_spectra)
+        self.plot_thread.quit()
+        self.plot_thread.wait()
+        self.reset_plot()
+        self.plot_worker = PlotWorker(
+            is_dark_data=self.dark_data,
+            is_bright_data=self.bright_data,
+            dark_mean=self.dark_mean,
+            bright_mean=self.bright_mean,
+            canvas=self.canvas,
+            xdata=self.xdata
+        )
+        self.emitter.ui_data_available.connect(self.plot_worker.plot_spectra)
+        self.plot_worker.moveToThread(self.plot_thread)
+        self.plot_thread.start()
+
+
     @pyqtSlot()
     def finished_plotting(self):
         self.statusBar().showMessage("Plotting process finished and images saved", 5000)
