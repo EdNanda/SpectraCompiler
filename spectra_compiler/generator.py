@@ -6,12 +6,11 @@ from multiprocessing import Process, Queue, Pipe
 
 
 class SpectroProcess(Process):
-    def __init__(self, to_emitter: Pipe, from_mother: Queue, inittime: str = "0.2", daemon=True):
+    def __init__(self, to_emitter: Pipe, from_mother: Queue, daemon=True):
         super().__init__()
         self.daemon = daemon
         self.to_emitter = to_emitter
         self.data_from_mother = from_mother
-        self.inttime = float(inittime)
         self.is_spectrometer = bool(len(sp.list_devices()))
         if self.is_spectrometer:  # TODO: check if this is needed or arbitarty fixing values are enough?
             _spec = sp.Spectrometer.from_first_available()
@@ -49,7 +48,7 @@ class SpectroProcess(Process):
                     self.to_emitter.send(ydata)
                     try:
                         inttime = self.data_from_mother.get_nowait()
-                        if self.inttime:
+                        if inttime:
                             self.spec.integration_time_micros(int(inttime * 1000000))
                         else:
                             self.spec.close()
@@ -58,15 +57,16 @@ class SpectroProcess(Process):
                         pass
         else:
             xx = np.arange(self.array_size)
+            inttime = 0.2
             while True:
-                accurate_delay(self.inttime)  # time.sleep(self.inttime)
+                accurate_delay(inttime)  # time.sleep(self.inttime)
                 ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0, 10001)
                 self.to_emitter.send(ydata)
                 try:
-                    self.inttime = self.data_from_mother.get_nowait()
-                    if self.inttime:
-                        self.inttime *= 1000  # convert to ms
-                        print("wait time changed (ms)", self.inttime)
+                    inttime = self.data_from_mother.get_nowait()
+                    if inttime:
+                        inttime *= 1000  # convert to ms
+                        print("wait time changed (ms)", inttime)
                     else:
                         break
                 except Empty:
