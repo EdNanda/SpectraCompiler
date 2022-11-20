@@ -25,7 +25,6 @@ if __name__ == "__main__":
     w.show()
     app.exec()
     spectro_process.join()
-    spectro_process.close()
     spectro_process.terminate()
 
 

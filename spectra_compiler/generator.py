@@ -14,8 +14,8 @@ class SpectroProcess(Process):
         self.inttime = float(inittime)
         self.is_spectrometer = bool(len(sp.list_devices()))
         if self.is_spectrometer:  # TODO: check if this is needed or arbitarty fixing values are enough?
-            self.spec = sp.Spectrometer.from_first_available()
-            self.xdata = self.spec.wavelengths()[2:]
+            _spec = sp.Spectrometer.from_first_available()
+            self.xdata = _spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
             print("spec found")
         else:
@@ -52,7 +52,7 @@ class SpectroProcess(Process):
                         if self.inttime:
                             self.spec.integration_time_micros(int(inttime * 1000000))
                         else:
-                            self.close()
+                            self.spec.close()
                             break
                     except Empty:
                         pass
@@ -71,7 +71,3 @@ class SpectroProcess(Process):
                         break
                 except Empty:
                     pass
-
-    def close(self):
-        if self.is_spectrometer:
-            self.spec.close()
