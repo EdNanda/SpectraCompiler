@@ -9,6 +9,10 @@ import pathlib
 from generator import SpectroProcess
 from workers import Emitter
 
+#TODO:
+# gathering_dark_counts and bright counts have the same logic??
+
+
 if __name__ == "__main__":
     icon_path = 'C:/Users/HYDN02/Seafile/IJPrinting_Edgar-Florian/python'
     icon_path = pathlib.Path(icon_path)

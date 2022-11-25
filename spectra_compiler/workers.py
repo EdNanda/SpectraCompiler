@@ -5,8 +5,8 @@ from multiprocessing import Pipe
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 import time
 
+
 class Emitter(QThread):
-    """ Emitter waits for data from the generator process and emits a signal for the UI for plotting. """
     ui_data_available = pyqtSignal(object)  # Signal indicating new UI data is available.
 
     def __init__(self, from_process: Pipe):
@@ -25,29 +25,58 @@ class Emitter(QThread):
 
 class PlotWorker(QObject):
 
-    def __init__(self, canvas, xdata, is_dark_data, is_bright_data, dark_mean, bright_mean):
+    def __init__(self, canvas, xdata, is_dark_data, is_bright_data, dark_mean, bright_mean, is_spectrometer=False):
         super(PlotWorker, self).__init__()
-        # Store constructor arguments (re-used for processing)
         self.canvas = canvas
         self.xdata = xdata
         self.is_dark_data = is_dark_data
         self.is_bright_data = is_bright_data
         self.dark_mean = dark_mean
         self.bright_mean = bright_mean
-        self._plot_ref, = self.canvas.axes.plot(self.xdata, np.ones(len(self.xdata)), 'r')
+        self._plot_ref = None
+        self.is_spectrometer = is_spectrometer
         self.render_buffer = None
+        self.show_raw = False
+        self._plot_re1 = None
+        self._plot_re2 = None
         self.timer = QTimer()
         self.timer.start(500)
         self.timer.timeout.connect(self.toggle)
+        self.reset_axes()
+
+    def reset_axes(self):
+        self.canvas.axes.cla()
+        self.canvas.axes.set_xlabel('Wavelength (nm)')
+        self.canvas.axes.set_ylabel('Intensity (a.u.)')
+        self.canvas.axes.grid(True, linestyle='--')
+        self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
+        # self.canvas.axes.set_xlim([400,850])
+        self.canvas.axes.set_ylim([0, 68000])
+        self.show_raw = False
+        self._plot_re1 = None
+        self._plot_re2 = None
+        self._plot_ref, = self.canvas.axes.plot(self.xdata, np.ones(len(self.xdata)), 'r')
+        if not self.is_spectrometer:
+            self._plot_ref.set_label("Spectrometer not found: Demo Data")
+            self.canvas.axes.legend()
 
     @pyqtSlot(object)
     def plot_spectra(self, spect):
         self.render_buffer = spect
 
     def toggle(self):
-        yarray = utils.spectra_math(self.render_buffer, self.is_dark_data, self.is_bright_data, self.dark_mean,
-                                    self.bright_mean)
-        self._plot_ref.set_ydata(yarray)
+        if self.show_raw:
+            if self.is_dark_data and self._plot_re1 is None:
+                self._plot_re1 = self.canvas.axes.plot(self.xdata, self.dark_mean, 'b', label="Dark")
+            if self.is_bright_data and self._plot_re2 is None:
+                self._plot_re2 = self.canvas.axes.plot(self.xdata, self.bright_mean, 'y', label="Bright")
+            self._plot_ref.set_ydata(self.render_buffer)  # TODO: check its yarray or render_buffer?
+            self._plot_ref.set_label("Spectra")
+            self.canvas.axes.legend()
+        else:
+            yarray = utils.spectra_math(self.render_buffer, self.is_dark_data, self.is_bright_data, self.dark_mean,
+                                        self.bright_mean)
+            self._plot_ref.set_ydata(yarray)
         self.canvas.draw_idle()
 
 
@@ -70,7 +99,7 @@ class Worker2(QObject):
         self.init_spectra_measurement()
 
     @pyqtSlot(object)
-    def run(self, spect): #TODO: rename
+    def run(self, spect):  # TODO: rename
         # print("Run start", spect.shape)
         yarray = utils.spectra_math(spect, self.is_dark_data, self.is_bright_data, self.dark_mean, self.bright_mean)
         self.gathering_spectra_counts(spect, yarray)
@@ -88,7 +117,7 @@ class Worker2(QObject):
         # self.spectra_measurement_bool = True
         self.spectra_counter = 0
         # self.counter = 0
-        self.array_count = 0 #TODO: REMOVE variable
+        self.array_count = 0  # TODO: REMOVE variable
 
     def gathering_spectra_counts(self, ydata, yarray):
         # print('gathering_spectra_counts')
@@ -114,4 +143,24 @@ class Worker2(QObject):
             self.spectra_data = True
             self.result.emit(self.spectra_raw_array, self.spectra_meas_array, self.time_meas_array)
             self.finished.emit()
+            print('finished thread.....')
+
+
+class Worker3(QObject):
+    result = pyqtSignal(object)
+
+    def __init__(self, average_cycles, array_size):
+        super(Worker3, self).__init__()
+        self.counter = 0
+        self.average_cycles = average_cycles
+        self.measured_array = np.ones((self.average_cycles, array_size))
+
+    @pyqtSlot(object)
+    def gathering_counts(self, spect):
+        if self.counter < self.average_cycles:
+            self.measured_array[self.counter] = np.array(spect)
+            self.counter += 1
+        else:
+            _mean = np.mean(self.measured_array, axis=0)
+            self.result.emit(_mean)
             print('finished thread.....')
