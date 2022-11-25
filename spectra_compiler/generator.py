@@ -6,16 +6,19 @@ from multiprocessing import Process, Queue, Pipe
 
 
 class SpectroProcess(Process):
+    MODEL_NAME = "FLMS12200"
+
     def __init__(self, to_emitter: Pipe, from_mother: Queue, daemon=True):
         super().__init__()
         self.daemon = daemon
         self.to_emitter = to_emitter
         self.data_from_mother = from_mother
         self.is_spectrometer = bool(len(sp.list_devices()))
-        if self.is_spectrometer:  # TODO: check if this is needed or arbitarty fixing values are enough?
+        if self.is_spectrometer:
             _spec = sp.Spectrometer.from_first_available()
             self.xdata = _spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
+            self.is_model_verified = (self.MODEL_NAME in self.spec.serial_number)
             print("spec found")
         else:
             self.array_size = 2046
@@ -40,10 +43,9 @@ class SpectroProcess(Process):
         if self.is_spectrometer:
             self.reinit_spectrometer_generator()
             _DP = 1420  # dead pixel on spectrometer @831.5nm
-            is_model_verified: bool = ("FLMS12200" in self.spec.serial_number)
             while True:
                 ydata = self.spec.intensities()[2:]
-                if is_model_verified:
+                if self.is_model_verified:
                     ydata[_DP] = np.mean(ydata[_DP - 2:_DP + 2])
                     self.to_emitter.send(ydata)
                     try:
