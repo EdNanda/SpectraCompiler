@@ -5,6 +5,12 @@ import seabreeze.spectrometers as sp
 from multiprocessing import Process, Queue, Pipe
 
 
+class SpectraReading:
+    def __init__(self, timestamp, data):
+        self.timestamp: float = timestamp
+        self.data: np.ndarray = data
+
+
 class SpectroProcess(Process):
     MODEL_NAME = "FLMS12200"
 
@@ -18,7 +24,7 @@ class SpectroProcess(Process):
             _spec = sp.Spectrometer.from_first_available()
             self.xdata = _spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
-            self.is_model_verified = (self.MODEL_NAME in self.spec.serial_number)
+            self.is_model_verified = (self.MODEL_NAME in _spec.serial_number)
             print("spec found")
         else:
             self.array_size = 2046
@@ -47,7 +53,8 @@ class SpectroProcess(Process):
                 ydata = self.spec.intensities()[2:]
                 if self.is_model_verified:
                     ydata[_DP] = np.mean(ydata[_DP - 2:_DP + 2])
-                    self.to_emitter.send(ydata)
+                    reading = SpectraReading(time.time(), ydata)
+                    self.to_emitter.send(reading)
                     try:
                         inttime = self.data_from_mother.get_nowait()
                         if inttime:
@@ -63,7 +70,8 @@ class SpectroProcess(Process):
             while True:
                 accurate_delay(inttime)  # time.sleep(self.inttime)
                 ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0, 10001)
-                self.to_emitter.send(ydata)
+                reading = SpectraReading(time.time(), ydata)
+                self.to_emitter.send(reading)
                 try:
                     inttime = self.data_from_mother.get_nowait()
                     if inttime:
