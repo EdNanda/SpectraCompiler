@@ -4,7 +4,7 @@ from PyQt5.QtCore import QTimer
 from multiprocessing import Pipe
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from generator import SpectraReading
-
+import time
 
 class Emitter(QThread):
     ui_data_available = pyqtSignal(object)  # Signal indicating new UI data is available.
@@ -43,6 +43,19 @@ class PlotWorker(QObject):
         self.timer.start(500)
         self.timer.timeout.connect(self.toggle)
         self.reset_axes()
+        self.is_measure_frequency = True
+        self.n_measure_cycles = 5
+        self.init_frequency_measure()
+
+    def init_frequency_measure(self):
+        self.timestamps = []
+        self.current_mean_frequency_ms: float = 0
+
+
+    def measure_freq_list(self, timestamps: list):
+        init_time = timestamps[0]
+        _timestamps = [(timestamp - init_time) for timestamp in timestamps]
+        self.current_mean_frequency_ms = 1000 * sum(_timestamps)/(2 * self.n_measure_cycles)
 
     def reset_axes(self):
         self.canvas.axes.cla()
@@ -63,6 +76,12 @@ class PlotWorker(QObject):
     @pyqtSlot(object)
     def plot_spectra(self, spect: SpectraReading):
         self.render_buffer = spect.data
+        if self.is_measure_frequency:
+            self.timestamps.append(spect.timestamp)
+            if len(self.timestamps) > self.n_measure_cycles:
+                self.timestamps.pop(0)
+                self.measure_freq_list(self.timestamps)
+
 
     def toggle(self):
         if self.show_raw:
@@ -93,7 +112,6 @@ class Worker2(QObject):
         self.is_dark_data = is_dark_data
         self.is_bright_data = is_bright_data
         self.dark_mean = dark_mean
-        self.start_time = timestamp
         self.bright_mean = bright_mean
         self.spectra_meas_array = np.ones((self.total_frames, self.array_size))
         self.spectra_raw_array = np.ones((self.total_frames, self.array_size))
@@ -126,7 +144,6 @@ class Worker2(QObject):
             self.progress.emit(self.spectra_counter)
         else:
             self.time_meas_array = self.time_meas_array - self.time_meas_array[0]
-            self.spectra_data = True
             self.result.emit(self.spectra_raw_array, self.spectra_meas_array, self.time_meas_array)
             self.finished.emit()
             print('finished thread.....')

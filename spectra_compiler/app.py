@@ -1,6 +1,6 @@
 import os
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout
+from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout, QApplication
 from PyQt5.QtWidgets import QFrame, QPushButton, QCheckBox, QLabel, QToolButton, QTextEdit, QScrollBar
 from PyQt5.QtWidgets import QSizePolicy, QMessageBox
 from PyQt5.QtCore import QThread, pyqtSlot
@@ -61,7 +61,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.spectra_data = False
         self.show_raw = False
         self.measuring = False
-
+        self.current_inttime_ms: float = 0
         self.dark_mean = None  # TODO: add all missing variables here --ashis
         self.bright_mean = None
         self.setWindowTitle("Spectra Compiler")
@@ -525,7 +525,15 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.integration_time = inttime  # TODO: unused variable? --ashis
         '''
+        self.current_inttime_ms = inttime*1000
         self.process_queue.put(inttime)
+
+    def wait_until_inttime_in_sync(self):
+        self.statusBar().showMessage('Waiting for integration times to be in sync.\tDo not click anything.')
+        while not abs(self.current_inttime_ms - self.plot_worker.current_mean_frequency_ms) <= 10: #10ms tolerance
+            QApplication.processEvents()
+            pass
+        self.statusBar().showMessage('Integration times are synced.')
 
     def dis_enable_widgets(self, status):  # TODO: Rename to "disable_widgets" ? --ashis
         ##Disable the following buttons and fields
@@ -599,6 +607,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def dark_measurement(self):
+        self.BDarkMeas.setEnabled(False)
+        self.wait_until_inttime_in_sync()
         self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
         self.BDarkMeas.setStyleSheet("color : yellow;")
         self.BDarkMeas.setText("Measuring...")
@@ -618,6 +628,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BDarkMeas.setStyleSheet("color : green;")
         self.BDarkMeas.setText("Measured")
         self.statusBar().showMessage('Measurement of dark spectra completed', 5000)
+        self.BDarkMeas.setEnabled(True)
         self.set_axis_range()
         self.refresh_plot()
 
@@ -653,6 +664,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def bright_measurement(self):
+        self.BBrightMeas.setEnabled(False)
+        self.wait_until_inttime_in_sync()
         self.average_cycles = int(self.LEcurave.text())
         self.BBrightMeas.setStyleSheet("color : yellow;")
         self.BBrightMeas.setText("Measuring...")
@@ -669,6 +682,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.brightdark_meas_thread.wait()
         self.bright_mean = bright_mean
         self.bright_data = True
+        self.BBrightMeas.setEnabled(True)
         self.BBrightMeas.setStyleSheet("color : green;")
         self.BBrightMeas.setText("Measured")
         self.statusBar().showMessage('Measurement of bright spectra completed', 5000)
@@ -729,7 +743,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.timer.stop()  # TODO: use single shot timer instead of stop?? --ashis
             self.LAelapse.setStyleSheet("color :black;")
             self.LAelapse.setText("00:00")
-
+            self.set_integration_time()
+            self.wait_until_inttime_in_sync()
             self.start_time = time()
             print("Starting Worker with the parameters:")
             print("total_frames=", self.total_frames)
@@ -749,11 +764,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                        dark_mean=self.dark_mean,
                                        bright_mean=self.bright_mean,
                                        timestamp=self.start_time)
-            # self.worker.signals.progress.connect(self.meas_worker.run)
             self.emitter.ui_data_available.connect(self.meas_worker.run)
             self.meas_worker.moveToThread(self.spec_thread)
-
-            #self.yworker.progress.connect(self.meas_worker.run)
             self.meas_worker.finished.connect(self.spec_thread.quit)
             self.meas_worker.finished.connect(self.meas_worker.deleteLater)
             # self.spec_thread.finished.connect(self.spec_thread.deleteLater)
@@ -763,7 +775,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.measuring = True
             self.dis_enable_widgets(True)
             self.create_folder(True)
-            self.set_integration_time()
             self.spec_thread.start(QThread.HighPriority) #TODO: increase priority --ashis
 
 
