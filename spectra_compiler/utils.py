@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import socket
 
@@ -15,9 +16,7 @@ def array_for_scrollbar(min_val=0.06, max_val=2, factor=0.385, max_bar=99) -> li
     :param max_bar:
     :return: (list)
     """
-    arr_scrbar = []
-    for i in range(100):  # TODO: convert to list comprehension --ashis
-        arr_scrbar.append(round(np.exp(i * (factor + np.log(max_val)) / max_bar) - 1 + min_val, 2))
+    arr_scrbar = [round(math.exp(i * (factor + math.log(max_val)) / max_bar) - 1 + min_val, 2) for i in range(100)]
     return arr_scrbar
 
 
