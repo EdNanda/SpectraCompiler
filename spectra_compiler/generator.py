@@ -53,17 +53,17 @@ class SpectroProcess(Process):
                 ydata = self.spec.intensities()[2:]
                 if self.is_model_verified:
                     ydata[_DP] = np.mean(ydata[_DP - 2:_DP + 2])
-                    reading = SpectraReading(time.time(), ydata)
-                    self.to_emitter.send(reading)
-                    try:
-                        inttime = self.data_from_mother.get_nowait()
-                        if inttime:
-                            self.spec.integration_time_micros(int(inttime * 1000000))
-                        else:
-                            self.spec.close()
-                            break
-                    except Empty:
-                        pass
+                reading = SpectraReading(time.time(), ydata)
+                self.to_emitter.send(reading)
+                try:
+                    inttime = self.data_from_mother.get_nowait()
+                    if inttime:
+                        self.spec.integration_time_micros(int(inttime * 1000000))
+                    else:
+                        self.spec.close()
+                        break
+                except Empty:
+                    pass
         else:
             xx = np.arange(self.array_size)
             inttime = 0.2
