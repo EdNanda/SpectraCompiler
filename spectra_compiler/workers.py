@@ -99,16 +99,16 @@ class PlotWorker(QObject):
         self.canvas.draw_idle()
 
 
-class Worker2(QObject):
+class SpectraGatherer(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
     result = pyqtSignal(object, object, object)
 
-    def __init__(self, total_frames, array_size, skip, is_dark_data, is_bright_data, dark_mean, bright_mean, timestamp):
-        super(Worker2, self).__init__()
+    def __init__(self, total_frames, array_size, skip, is_dark_data, is_bright_data, dark_mean, bright_mean):
+        super(SpectraGatherer, self).__init__()
         self.total_frames = total_frames
         self.array_size = array_size
-        self.skip = skip  # TODO: make sure skip is non-zero --ashis
+        self.skip = skip+1  # TODO: make sure skip is non-zero --ashis
         self.is_dark_data = is_dark_data
         self.is_bright_data = is_bright_data
         self.dark_mean = dark_mean
@@ -135,7 +135,7 @@ class Worker2(QObject):
 
     def gathering_spectra_counts(self, ydata, yarray, timestamp):
         if self.spectra_counter < self.total_frames:
-            if self.spectra_counter == 0 or self.spectra_counter % self.skip == 0:
+            if self.spectra_counter == 0 or (self.spectra_counter % self.skip) == 0:
                 self.spectra_raw_array[self.array_count] = np.array(ydata) #TODO: should we wrap as numpy array again?
                 self.spectra_meas_array[self.array_count] = np.array(yarray)
                 self.time_meas_array[self.array_count] = timestamp

@@ -14,7 +14,7 @@ from workers import Emitter
 
 
 if __name__ == "__main__":
-    icon_path = 'C:/Users/HYDN02/Seafile/IJPrinting_Edgar-Florian/python'
+    icon_path = '../resources/rainbow.ico'
     icon_path = pathlib.Path(icon_path)
     app = QtWidgets.QApplication(sys.argv)
 
