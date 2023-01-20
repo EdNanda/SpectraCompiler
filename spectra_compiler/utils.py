@@ -36,17 +36,13 @@ def LEskip_positive_number(string_val: str) -> str:
         return string_val
 
 
-def spectra_math(ydata, is_dark_data, is_bright_data, dark_mean, bright_mean):
+def spectra_math(ydata: np.ndarray, is_dark_data, is_bright_data, dark_mean, bright_mean) -> np.ndarray:
     if is_dark_data and not is_bright_data:
         yarray = (ydata - dark_mean)
     elif is_bright_data and not is_dark_data:
         yarray = ydata / bright_mean
     elif is_bright_data and is_dark_data:
-        yarray = 1 - np.divide((ydata - dark_mean), (bright_mean - dark_mean))
+        yarray = 1 - np.divide((ydata - dark_mean), (bright_mean - dark_mean) + 1e-6)
     else:
         return ydata
     return yarray
-
-"""
-Maybe start a class called "SpectraAlgorithms" with all algorithm functions and state variables eg- ydata, bright_mean
-"""

@@ -68,7 +68,7 @@ class SpectroProcess(Process):
             xx = np.arange(self.array_size)
             inttime = 0.2
             while True:
-                accurate_delay(inttime)  # time.sleep(self.inttime)
+                accurate_delay(inttime)
                 ydata = 50000 * np.exp(-(xx - 900) ** 2 / (2 * 100000)) + np.random.randint(0, 10001)
                 reading = SpectraReading(time.time(), ydata)
                 self.to_emitter.send(reading)

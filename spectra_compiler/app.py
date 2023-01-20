@@ -78,14 +78,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.brightdark_meas_worker = None
 
         self.statusBar().showMessage("Program by Edgar Nandayapa - 2021", 10000)
-        # self.statusBar().showMessage("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount(),10000)
 
         self.create_widgets()
         self.arr_scrbar = utils.array_for_scrollbar()  ##This function makes an array for the scrollbar
         self.set_integration_time()  ##This resets the starting integration time value
         self.button_actions()  ##Set button actions
 
-    def create_widgets(self):  # TODO: could rename to setupUi --ashis
+    def create_widgets(self):
+        '''
+        Setups up the GUI
+        '''
         widget = QWidget()
         layH1 = QHBoxLayout()  ##Main (horizontal) Layout
 
@@ -318,6 +320,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show()
 
     def button_actions(self):
+        '''
+        QT button action connections are here.
+        '''
         self.send_to_Qthread()
         self.folder = self.LEfolder.text()
         self.Bfolder.clicked.connect(self.select_folder)
@@ -500,15 +505,8 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.SBinttime.setValue(pos)
             self.LEinttime.setText(str(inttime))
-
         ## Update frames label
         self.update_number_of_frames()
-        '''
-        if self.spectrometer:
-            self.spec.integration_time_micros(int(inttime * 1000000))
-        else:
-            self.integration_time = inttime  # TODO: unused variable? --ashis
-        '''
         self.current_inttime_ms = inttime * 1000
         self.process_queue.put(inttime)
 
@@ -519,13 +517,12 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
         self.statusBar().showMessage('Integration times are synced.')
 
-    def dis_enable_widgets(self, status):  # TODO: Rename to "disable_widgets" ? --ashis
+    def toggle_widgets(self, status):
         ##Disable the following buttons and fields
         wi_dis = [self.LEinttime, self.Binttime, self.SBinttime,  # self.BStart,
                   self.LEsample, self.LEuser, self.LEfolder, self.BBrightMeas,
                   self.BDarkMeas, self.LEdeltime, self.LEmeatime, self.Bfolder,
                   self.Bpath]
-
         for wd in wi_dis:
             if status:
                 wd.setEnabled(False)
@@ -561,32 +558,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 spectral_data = pd.concat([wave, PLspecR], axis=1, join="inner")
         else:
             spectra = spectra_meas_array
-
-            # if self.dark_data:
-            #     spectra = (self.spectra_meas_array-self.dark_mean)
-            # elif self.bright_data and self.dark_data:
-            #     spectra = (self.spectra_meas_array-self.dark_mean) / (self.spectra_meas_array-self.dark_mean)
-            # else:
-            #     spectra = self.spectra_meas_array
-
             PLspec = pd.DataFrame(spectra.T, columns=time_meas_array)
             spectral_data = pd.concat([wave, PLspec], axis=1, join="inner")
 
-        # print(spectral_data)
         ## Remove all unused columns
         spectral_data = spectral_data.dropna(axis=1, how="all")
-        # print(spectral_data)
-
         filename = self.folder + self.sample + "_PL_measurement.csv"
         metadata.to_csv(filename, header=False)
         spectral_data.to_csv(filename, mode="a", index=False)
-
         if self.BSavePlot.isChecked():
             self.make_heatplot(spectra_raw_array, spectra_meas_array, time_meas_array)
-        # self.Qthread_plotting(self.make_heatplot)
-
         self.statusBar().showMessage("Data saved successfully", 5000)
-        # get_ipython().magic('reset -sf')
 
     @pyqtSlot()
     def dark_measurement(self):
@@ -673,19 +655,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spec_thread.quit()
             self.is_measuring = False
             self.is_spectra_measurement = False  # TODO: Check and remove this variable --ashis
-            self.dis_enable_widgets(False)
+            self.toggle_widgets(False)
             self.save_data(self.meas_worker.spectra_raw_array, self.meas_worker.spectra_meas_array,
                            self.meas_worker.time_meas_array)
 
     def delayed_start(self):
-        print("delyed start")
         self.LAelapse.setStyleSheet("color :red;")
         self.LAelapse.setText("00:{:02.2f}".format(float(round(self.delay, 2))))
         self.delay = self.delay - self.timer_interval
-        skip = int(self.LEskip.text())  # TODO: make sure skip is non-zero --ashis
-
+        skip = int(self.LEskip.text())
         if self.delay <= 0:
-            self.timer.stop()  # TODO: use single shot timer instead of stop?? --ashis
+            self.timer.stop()
             self.LAelapse.setStyleSheet("color :black;")
             self.LAelapse.setText("00:00")
             self.set_integration_time()
@@ -700,7 +680,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print("dark_mean =", self.dark_mean)
             print("Bright Mean", self.bright_mean)
             print("timestamp=", self.start_time)
-
             self.meas_worker = SpectraGatherer(total_frames=self.total_frames,
                                                array_size=self.array_size,
                                                skip=skip,
@@ -712,19 +691,17 @@ class MainWindow(QtWidgets.QMainWindow):
             self.meas_worker.moveToThread(self.spec_thread)
             self.meas_worker.finished.connect(self.spec_thread.quit)
             self.meas_worker.finished.connect(self.meas_worker.deleteLater)
-            # self.spec_thread.finished.connect(self.spec_thread.deleteLater)
             self.meas_worker.progress.connect(self.during_measurement)
             self.meas_worker.result.connect(self.save_data)
             self.spec_thread.finished.connect(self.after_measurement)
             self.is_measuring = True
-            self.dis_enable_widgets(True)
+            self.toggle_widgets(True)
             self.create_folder(True)
-            self.spec_thread.start(QThread.HighPriority)  # TODO: increase priority --ashis
+            self.spec_thread.start(QThread.HighPriority)
 
     @pyqtSlot()
     def set_axis_range(self):
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-
         if self.Brange.isChecked():
             if self.is_bright_data:
                 self.canvas.axes.set_ylim([-10, 10])
@@ -740,7 +717,6 @@ class MainWindow(QtWidgets.QMainWindow):
             glob_max = np.max([np.max(self.bright_mean), np.min(self.dark_mean)])
             self.canvas.axes.set_ylim([glob_min * 0.9, glob_max * 1.1])
             self.canvas.axes.set_xlim([350, 850])
-
         else:
             self.canvas.axes.set_ylim([0, 68000])
             self.canvas.axes.set_xlim([330, 1030])
@@ -756,20 +732,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def after_measurement(self):
-        self.dis_enable_widgets(False)
+        self.toggle_widgets(False)
         self.is_measuring = False
 
     def make_heatplot(self, spectra_raw_array, spectra_meas_array, time_meas_array):  ## Triggered at the End
         matplotlib.use('Agg')
         plt.ioff()
-
         fig = plt.figure(figsize=[8, 6])
         ax1 = fig.add_subplot(1, 1, 1)
-
-        # progress_callback.emit(None)
-
-        # xsize = len(self.time_meas_array)
-
         if self.Braw.isChecked():
             time = time_meas_array
             heatplot = spectra_raw_array.T
@@ -798,22 +768,10 @@ class MainWindow(QtWidgets.QMainWindow):
         ax1.set_xticklabels(np.around(np.linspace(0, np.max(time), 8), decimals=1))
         ax1.pcolorfast(heatplot)
         fig.savefig(
-            self.folder + "0_preview_" + self.sample + "_heatplot.png")  # ,bbox_inches = "tight")   # save the figure to file
+            self.folder + "0_preview_" + self.sample + "_heatplot.png")
         plt.close()  # close the figure window
 
     def send_to_Qthread(self):
-        ## Create a QThread object
-        # self.thread = QThread()
-        ## Create a worker object and send function to it
-        # self.worker = Worker(self.get_ydata)
-        # self.yworker = Worker1(self.spec, self.array_size, self.xdata, self.LEinttime.text())
-        # self.yworker.moveToThread(self.ydata_thread)
-        ## Whenever signal exists, send it to plot
-        # self.yworker.progress.connect(self.plot_spectra)
-        # self.ydata_thread.started.connect(self.yworker.get_ydata)
-        # self.ydata_thread.start(QThread.HighPriority)
-        ## Start threadpool
-        # self.threadpool.start(self.worker)
         self.plot_worker = PlotWorker(
             is_dark_data=self.is_dark_data,
             is_bright_data=self.is_bright_data,
@@ -823,15 +781,12 @@ class MainWindow(QtWidgets.QMainWindow):
             xdata=self.xdata,
             is_spectrometer=self.is_spectrometer
         )
-
-        # self.worker.signals.progress.connect(self.meas_worker.run)
         self.emitter.ui_data_available.connect(self.plot_worker.plot_spectra)
         self.plot_worker.moveToThread(self.plot_thread)
         self.plot_thread.start()
 
     @pyqtSlot()
     def refresh_plot(self):
-        print('in refresh plot')
         self.plot_worker.show_raw = self.Braw.isChecked()
         self.plot_worker.is_dark_data = self.is_dark_data
         self.plot_worker.is_bright_data = self.is_bright_data
@@ -844,19 +799,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def finished_plotting(self):
         self.statusBar().showMessage("Plotting process finished and images saved", 5000)
 
-    # TODO: funtion not called? --ashis
-    '''
-    def Qthread_plotting(self, func):
-        ## Create a QThread object
-        self.thread = QThread()
-        ## Create a worker object and send function to it
-        self.worker = Worker(func)
-        ## Whenever signal exists, send it to plot
-        self.thread.finished.connect(self.finished_plotting)
-        ## Start threadpool
-        self.threadpool.start(self.worker)
-    '''
-
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -867,6 +809,5 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plot_thread.wait()
             event.accept()
             self.process_queue.put(None)
-            # print('Window closed')
         else:
             event.ignore()
