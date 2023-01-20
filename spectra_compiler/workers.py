@@ -6,6 +6,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from generator import SpectraReading
 import time
 
+
 class Emitter(QThread):
     ui_data_available = pyqtSignal(object)  # Signal indicating new UI data is available.
 
@@ -51,11 +52,10 @@ class PlotWorker(QObject):
         self.timestamps = []
         self.current_mean_frequency_ms: float = 0
 
-
     def measure_freq_list(self, timestamps: list):
         init_time = timestamps[0]
         _timestamps = [(timestamp - init_time) for timestamp in timestamps]
-        self.current_mean_frequency_ms = 1000 * sum(_timestamps)/(2 * self.n_measure_cycles)
+        self.current_mean_frequency_ms = 1000 * sum(_timestamps) / (2 * self.n_measure_cycles)
 
     def reset_axes(self):
         self.canvas.axes.cla()
@@ -82,7 +82,6 @@ class PlotWorker(QObject):
                 self.timestamps.pop(0)
                 self.measure_freq_list(self.timestamps)
 
-
     def toggle(self):
         if self.show_raw:
             if self.is_dark_data and self._plot_re1 is None:
@@ -108,7 +107,7 @@ class SpectraGatherer(QObject):
         super(SpectraGatherer, self).__init__()
         self.total_frames = total_frames
         self.array_size = array_size
-        self.skip = skip+1  # TODO: make sure skip is non-zero --ashis
+        self.skip = skip + 1
         self.is_dark_data = is_dark_data
         self.is_bright_data = is_bright_data
         self.dark_mean = dark_mean
@@ -121,7 +120,7 @@ class SpectraGatherer(QObject):
         self.init_spectra_measurement()
 
     @pyqtSlot(object)
-    def run(self, reading: SpectraReading):  # TODO: rename
+    def measure(self, reading: SpectraReading):
         spect = reading.data
         yarray = utils.spectra_math(spect, self.is_dark_data, self.is_bright_data, self.dark_mean, self.bright_mean)
         self.gathering_spectra_counts(spect, yarray, reading.timestamp)
@@ -136,8 +135,8 @@ class SpectraGatherer(QObject):
     def gathering_spectra_counts(self, ydata, yarray, timestamp):
         if self.spectra_counter < self.total_frames:
             if self.spectra_counter == 0 or (self.spectra_counter % self.skip) == 0:
-                self.spectra_raw_array[self.array_count] = np.array(ydata) #TODO: should we wrap as numpy array again?
-                self.spectra_meas_array[self.array_count] = np.array(yarray)
+                self.spectra_raw_array[self.array_count] = ydata
+                self.spectra_meas_array[self.array_count] = yarray
                 self.time_meas_array[self.array_count] = timestamp
                 self.array_count += 1
             self.spectra_counter += 1
@@ -149,11 +148,11 @@ class SpectraGatherer(QObject):
             print('finished thread.....')
 
 
-class Worker3(QObject):
+class DarkBrightGatherer(QObject):
     result = pyqtSignal(object)
 
     def __init__(self, average_cycles, array_size):
-        super(Worker3, self).__init__()
+        super(DarkBrightGatherer, self).__init__()
         self.counter = 0
         self.average_cycles = average_cycles
         self.measured_array = np.ones((self.average_cycles, array_size))

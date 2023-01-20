@@ -19,7 +19,7 @@ from time import time, strftime, localtime
 from datetime import datetime
 import utils
 import pathlib
-from workers import PlotWorker, SpectraGatherer, Worker3
+from workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -595,7 +595,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
         self.BDarkMeas.setStyleSheet("color : yellow;")
         self.BDarkMeas.setText("Measuring...")
-        self.brightdark_meas_worker = Worker3(self.average_cycles, self.array_size)
+        self.brightdark_meas_worker = DarkBrightGatherer(self.average_cycles, self.array_size)
         self.emitter.ui_data_available.connect(self.brightdark_meas_worker.gathering_counts)
         self.brightdark_meas_worker.result.connect(self.after_dark_measurement)
         self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
@@ -630,7 +630,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.average_cycles = int(self.LEcurave.text())
         self.BBrightMeas.setStyleSheet("color : yellow;")
         self.BBrightMeas.setText("Measuring...")
-        self.brightdark_meas_worker = Worker3(self.average_cycles, self.array_size)
+        self.brightdark_meas_worker = DarkBrightGatherer(self.average_cycles, self.array_size)
         self.emitter.ui_data_available.connect(self.brightdark_meas_worker.gathering_counts)
         self.brightdark_meas_worker.result.connect(self.after_bright_measurement)
         self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
@@ -707,9 +707,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                                is_dark_data=self.is_dark_data,
                                                is_bright_data=self.is_bright_data,
                                                dark_mean=self.dark_mean,
-                                               bright_mean=self.bright_mean,
-                                               timestamp=self.start_time)
-            self.emitter.ui_data_available.connect(self.meas_worker.run)
+                                               bright_mean=self.bright_mean)
+            self.emitter.ui_data_available.connect(self.meas_worker.measure)
             self.meas_worker.moveToThread(self.spec_thread)
             self.meas_worker.finished.connect(self.spec_thread.quit)
             self.meas_worker.finished.connect(self.meas_worker.deleteLater)
