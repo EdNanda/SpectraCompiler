@@ -331,7 +331,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BloadM.clicked.connect(self.load_meta)
         self.Binttime.clicked.connect(self.set_integration_time)
         self.LEinttime.returnPressed.connect(self.set_integration_time)
-        self.SBinttime.valueChanged.connect(self.scrollbar_action)
+        self.SBinttime.sliderReleased.connect(self.scrollbar_action)
         self.BDarkMeas.clicked.connect(self.dark_measurement)
         self.BBrightMeas.clicked.connect(self.bright_measurement)
         self.BStart.clicked.connect(self.press_start)
