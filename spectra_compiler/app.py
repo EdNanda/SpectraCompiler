@@ -1,81 +1,32 @@
-__author__ = "Edgar Nandayapa"
-__version__ = "1.07-2021"
-
-import sys
-import matplotlib
-
-matplotlib.use('Qt5Agg')
-
+import os
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout
+from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout, QApplication
 from PyQt5.QtWidgets import QFrame, QPushButton, QCheckBox, QLabel, QToolButton, QTextEdit, QScrollBar
 from PyQt5.QtWidgets import QSizePolicy, QMessageBox
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, QRunnable, pyqtSlot, QThreadPool
+from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
-
+import matplotlib
+matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
-
 rcParams.update({'figure.autolayout': True})
-
-# from IPython import get_ipython
-
-from seabreeze.spectrometers import Spectrometer
 import pandas as pd
 import numpy as np
-import os
-import math
-import random
-from time import time, sleep, strftime, localtime
+from time import time, strftime, localtime
 from datetime import datetime
-import traceback
+import utils
+import pathlib
+from workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
 
 
-# global size
-# size = 2046
-
-
-## These two classes make parallel measurement of PL spectra possible
-class WorkerSignals(QObject):
-    finished = pyqtSignal()
-    error = pyqtSignal(tuple)
-    result = pyqtSignal(object)
-    progress = pyqtSignal(object)
-
-
-class Worker(QRunnable):
-
-    def __init__(self, fn, *args, **kwargs):
-        super(Worker, self).__init__()
-
-        # Store constructor arguments (re-used for processing)
-        self.fn = fn
-        self.args = args
-        self.kwargs = kwargs
-        self.signals = WorkerSignals()
-
-        self.kwargs['progress_callback'] = self.signals.progress
-
-    @pyqtSlot()
-    def run(self):
-
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except:
-            traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-            self.signals.error.emit((exctype, value, traceback.format_exc()))
-        else:
-            self.signals.result.emit(result)  # Return the result of the processing
-        finally:
-            self.signals.finished.emit()  # Done
-
-
-## This makes the plot happen
 class MplCanvas(FigureCanvasQTAgg):
+    '''
+    This makes the plot happen
+    '''
+
     def __init__(self, parent=None, width=5, height=4, dpi=300, tight_layout=True):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
@@ -85,59 +36,64 @@ class MplCanvas(FigureCanvasQTAgg):
         self.axes.set_xlim([330, 1030])
         # self.axes.set_xlim([400,850])
         self.axes.set_ylim([0, 68000])
-        fig.tight_layout()
+        # fig.tight_layout() # to remove warning --ashis
         super(MplCanvas, self).__init__(fig)
 
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, icon_path: pathlib.Path, is_spectrometer: bool, emitter, child_process_queue, xdata, array_size,
+                 *args, **kwargs):
+        '''
+        Initialize parameters
+        :param args:
+        :param kwargs:
+        '''
         super(MainWindow, self).__init__(*args, **kwargs)
-
-        ## Initialize parameters
-        self.dark_measurement_bool = False
-        self.bright_measurement_bool = False
-        self.spectra_measurement_bool = False
-        self.dark_data = False
-        self.bright_data = False
-        self.spectra_data = False
-        self.show_raw = False
-        self.measuring = False
+        self.is_dark_measurement = False  # TODO: change bool variable naming convention --ashis
+        self.is_spectra_measurement = False
+        self.is_dark_data = False
+        self.is_bright_data = False
+        self.is_spectra_data = False
+        self.is_show_raw = False
+        self.is_measuring = False
+        self.current_inttime_ms: float = 0
+        self.dark_mean = None  # TODO: add all missing variables here --ashis
+        self.bright_mean = None
         self.setWindowTitle("Spectra Compiler")
-        folder = "C:\\Users\\HYDN02\\Seafile\\IJPrinting_Edgar-Florian\\python\\"
-        self.setWindowIcon(QtGui.QIcon(folder + "rainbow.ico"))
+        self.setWindowIcon(QtGui.QIcon(str(icon_path)))
         np.seterr(divide='ignore', invalid='ignore')
 
-        try:
-            self.spec = Spectrometer.from_first_available()
-            self.spec.integration_time_micros(200000)
-            self.xdata = self.spec.wavelengths()[2:]
-            self.array_size = len(self.xdata)
-            self.spec_counts = []
-            self.spectrometer = True
-        except:
-            self.array_size = 2046
-            self.xdata = np.linspace(340, 1015, self.array_size)
-            self.spectrometer = False
+        self.is_spectrometer = is_spectrometer  # TODO: Remove unused
+        self.process_queue = child_process_queue
+        self.xdata = xdata
+        self.array_size = array_size
+        self.emitter = emitter
+        self.emitter.daemon = True
+        self.emitter.start()
 
-        self.threadpool = QThreadPool()
+        self.spec_thread = QThread()
+        self.plot_thread = QThread()
+        self.brightdark_meas_thread = QThread()
+        self.brightdark_meas_worker = None
 
         self.statusBar().showMessage("Program by Edgar Nandayapa - 2021", 10000)
-        # self.statusBar().showMessage("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount(),10000)
 
         self.create_widgets()
-
-        self.array_for_scrollbar()  ##This function makes an array for the scrollbar
+        self.arr_scrbar = utils.array_for_scrollbar()  ##This function makes an array for the scrollbar
         self.set_integration_time()  ##This resets the starting integration time value
         self.button_actions()  ##Set button actions
 
     def create_widgets(self):
+        '''
+        Setups up the GUI
+        '''
         widget = QWidget()
         layH1 = QHBoxLayout()  ##Main (horizontal) Layout
 
         ## Create the maptlotlib FigureCanvas for plotting
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
-        self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
+        # self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
         self.canvas.setMinimumWidth(600)  ##Fix width so it doesn't change
         self.canvas.setMinimumHeight(450)
         self.setCentralWidget(self.canvas)
@@ -150,7 +106,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BSavePlot = QCheckBox("Create heatplot")
         self.BSavePlot.setChecked(True)
 
-        ### Place all widgets 
+        ### Place all widgets
         ## First in a grid
         LBgrid = QGridLayout()
         LBgrid.addWidget(QLabel(" "), 0, 0)
@@ -233,7 +189,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.LEinttime.setText("0.2")
         self.LEdeltime.setText("0")
         self.LEmeatime.setText("10")
-        self.LEskip.setText("1")
+        self.LEskip.setText("0")
 
         ## Third set of setup values
         self.LEcurave = QLineEdit()
@@ -296,7 +252,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layH1.addItem(horizontalSpacerH1)
         layH1.addLayout(layV2, 3)
 
-        ### Make third vertical layout for metadata 
+        ### Make third vertical layout for metadata
         layV3 = QtWidgets.QVBoxLayout()
 
         ## List of relevant values
@@ -364,6 +320,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.show()
 
     def button_actions(self):
+        '''
+        QT button action connections are here.
+        '''
         self.send_to_Qthread()
         self.folder = self.LEfolder.text()
         self.Bfolder.clicked.connect(self.select_folder)
@@ -372,13 +331,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BloadM.clicked.connect(self.load_meta)
         self.Binttime.clicked.connect(self.set_integration_time)
         self.LEinttime.returnPressed.connect(self.set_integration_time)
-        self.SBinttime.valueChanged.connect(self.scrollbar_action)
+        self.SBinttime.sliderReleased.connect(self.scrollbar_action)
         self.BDarkMeas.clicked.connect(self.dark_measurement)
         self.BBrightMeas.clicked.connect(self.bright_measurement)
         self.BStart.clicked.connect(self.press_start)
         self.LEmeatime.textChanged.connect(self.update_number_of_frames)
         self.Brange.stateChanged.connect(self.set_axis_range)
         self.Braw.stateChanged.connect(self.set_axis_range)
+        self.Braw.stateChanged.connect(self.refresh_plot)
         self.BBrightDel.clicked.connect(self.delete_bright_measurement)
         self.BDarkDel.clicked.connect(self.delete_dark_measurement)
 
@@ -437,7 +397,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.create_folder(True, retry)
                 self.statusBar().showMessage("Sample is duplicated", 10000)
 
-        ##If folders don't exist, make them        
+        ##If folders don't exist, make them
         if not os.path.exists(self.folder):
             os.makedirs(self.folder)
             self.statusBar().showMessage("Folder " + self.folder + " created", 5000)
@@ -481,8 +441,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sample = self.LEsample.text()
         self.meta_dict = {}  ## All variables will be collected here
         ## Gather all relevant information
-        addit_data = [self.dark_data, self.bright_data]
-        addit_labl = ["Dark measurement", "Bright measurement"]
+        # addit_data = [self.dark_data, self.bright_data]
+        # addit_labl = ["Dark measurement", "Bright measurement"]
 
         all_metaD_labs = self.setup_labs + self.exp_labels + self.glv_labels
         all_metaD_vals = self.setup_vals + self.exp_vars + self.glv_vars
@@ -492,7 +452,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(self.start_time))
         except:
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(time()))
-        self.meta_dict["Location"] = "ass"#os.environ['COMPUTERNAME']
+        self.meta_dict["Location"] = utils.get_host_name()
         try:
             self.meta_dict["Device"] = (self.spec.model + " - Serial No.:" + self.spec.serial_number)
         except:
@@ -501,23 +461,11 @@ class MainWindow(QtWidgets.QMainWindow):
         for cc, di in enumerate(all_metaD_labs):
             self.meta_dict[di] = all_metaD_vals[cc].text()
 
-        for cp, ad in enumerate(addit_labl):
-            self.meta_dict[ad] = addit_data[cp]
+        self.meta_dict["Dark measurement"] = self.is_dark_data
+        self.meta_dict["Bright measurement"] = self.is_bright_data
 
         self.meta_dict[
             "Comments"] = self.com_labels.toPlainText()  ## This field has a diffferent format than the others
-
-    ## Makes sure that number of skipped measurements is a positive integer
-    def LEskip_positive_number(self):
-        string = self.LEskip.text()
-        try:
-            num = int(string)
-            if num < 0:
-                self.LEskip.setText("1")
-            else:
-                pass
-        except:
-            self.LEskip.setText("1")
 
     ## To update the field with total number of measurement frames
     @pyqtSlot()
@@ -533,19 +481,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.total_frames = 1
         self.LAframes.setText(str(self.total_frames))
 
-    def array_for_scrollbar(self):
-        ## Necessary values to have a log scrolling bar
-        min_val = 0.06
-        max_val = 2
-        factor = 0.385
-        max_bar = 99
-
-        self.arr_scrbar = []
-
-        ## Create an array of values for the scrollbar
-        for i in range(100):
-            self.arr_scrbar.append(round(np.exp(i * (factor + np.log(max_val)) / max_bar) - 1 + min_val, 2))
-
     @pyqtSlot()
     def scrollbar_action(self):
         bar = self.SBinttime.value()  ##Read scrollbar value
@@ -554,8 +489,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def set_integration_time(self):
+        # print('set_integration_time')
         try:
             inttime = self.LEinttime.text()
+            # self.yworker.set_intime(inttime)
             inttime = float(inttime.replace(',', '.'))  ## Read Entry field
         except:
             inttime = 0.1
@@ -568,23 +505,24 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.SBinttime.setValue(pos)
             self.LEinttime.setText(str(inttime))
-
         ## Update frames label
         self.update_number_of_frames()
+        self.current_inttime_ms = inttime * 1000
+        self.process_queue.put(inttime)
 
-        if self.spectrometer:
-            self.spec.integration_time_micros(int(inttime * 1000000))
-        else:
-            self.integration_time = inttime
+    def wait_until_inttime_in_sync(self):
+        self.statusBar().showMessage('Waiting for integration times to be in sync.\tDo not click anything.')
+        while not abs(self.current_inttime_ms - self.plot_worker.current_mean_frequency_ms) <= 10:  # 10ms tolerance
+            QApplication.processEvents()
             pass
+        self.statusBar().showMessage('Integration times are synced.')
 
-    def dis_enable_widgets(self, status):
+    def toggle_widgets(self, status):
         ##Disable the following buttons and fields
         wi_dis = [self.LEinttime, self.Binttime, self.SBinttime,  # self.BStart,
                   self.LEsample, self.LEuser, self.LEfolder, self.BBrightMeas,
                   self.BDarkMeas, self.LEdeltime, self.LEmeatime, self.Bfolder,
                   self.Bpath]
-
         for wd in wi_dis:
             if status:
                 wd.setEnabled(False)
@@ -595,343 +533,225 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.BStart.setText("START")
                 self.BStart.setStyleSheet("color : green;")
 
-    def save_data(self):
+    @pyqtSlot(object, object, object)
+    def save_data(self, spectra_raw_array, spectra_meas_array, time_meas_array):
         self.gather_all_metadata()
         metadata = pd.DataFrame.from_dict(self.meta_dict, orient='index')
         wave = pd.DataFrame({"Wavelength (nm)": self.xdata})
 
         if self.Braw.isChecked():
-            PLspecR = pd.DataFrame(self.spectra_raw_array.T, columns=self.time_meas_array)
-            ## Remove all unused columns 
+            PLspecR = pd.DataFrame(spectra_raw_array.T, columns=time_meas_array)
+            ## Remove all unused columns
             PLspecR = PLspecR.drop(list(PLspecR.filter(regex='Test')), axis=1, inplace=True)
-            if self.dark_data:
+            if self.is_dark_data:
                 dark = pd.DataFrame({"Dark spectra": self.dark_mean})
-            if self.bright_data:
+            if self.is_bright_data:
                 bright = pd.DataFrame({"Bright spectra": self.bright_mean})
 
-            if self.dark_data and self.bright_data:
+            if self.is_dark_data and self.is_bright_data:
                 spectral_data = pd.concat([wave, dark, bright, PLspecR], axis=1, join="inner")
-            elif self.dark_data:
+            elif self.is_dark_data:
                 spectral_data = pd.concat([wave, dark, PLspecR], axis=1, join="inner")
-            elif self.bright_data:
+            elif self.is_bright_data:
                 spectral_data = pd.concat([wave, bright, PLspecR], axis=1, join="inner")
             else:
                 spectral_data = pd.concat([wave, PLspecR], axis=1, join="inner")
         else:
-            spectra = self.spectra_meas_array
-
-            # if self.dark_data:
-            #     spectra = (self.spectra_meas_array-self.dark_mean) 
-            # elif self.bright_data and self.dark_data:
-            #     spectra = (self.spectra_meas_array-self.dark_mean) / (self.spectra_meas_array-self.dark_mean)
-            # else:
-            #     spectra = self.spectra_meas_array
-
-            PLspec = pd.DataFrame(spectra.T, columns=self.time_meas_array)
+            spectra = spectra_meas_array
+            PLspec = pd.DataFrame(spectra.T, columns=time_meas_array)
             spectral_data = pd.concat([wave, PLspec], axis=1, join="inner")
 
-        # print(spectral_data)
-        ## Remove all unused columns 
+        ## Remove all unused columns
         spectral_data = spectral_data.dropna(axis=1, how="all")
-        # print(spectral_data) 
-
         filename = self.folder + self.sample + "_PL_measurement.csv"
         metadata.to_csv(filename, header=False)
         spectral_data.to_csv(filename, mode="a", index=False)
-
         if self.BSavePlot.isChecked():
-            self.make_heatplot(None)
-        # self.Qthread_plotting(self.make_heatplot)
-
+            self.make_heatplot(spectra_raw_array, spectra_meas_array, time_meas_array)
         self.statusBar().showMessage("Data saved successfully", 5000)
-        # get_ipython().magic('reset -sf')
-
-    ## This function is sent to the parallel Qthread    
-    def get_ydata(self, progress_callback):
-        try:
-            while True:
-                # for i in range(25):
-                ydata = self.spec.intensities()[2:]
-                if "FLMS12200" in self.spec.serial_number:
-                    dp = 1420  ##dead pixel on spectrometer @831.5nm
-                    # ydata[dp] = np.nan
-                    ydata[dp] = np.mean(ydata[dp - 2:dp + 2])
-                progress_callback.emit(ydata)
-        except:
-            ydata = np.ones(len(self.xdata))
-            # for i in range(25)
-            while True:
-                inttime = self.LEinttime.text()
-                sleep(float(inttime))
-                for cc, xx in enumerate(range(self.array_size)):
-                    ydata[cc] = 50000 * math.exp(-(xx - 900) ** 2 / (2 * 100000)) + random.randint(0, 10000)
-                progress_callback.emit(ydata)
-        return "Done!!"
 
     @pyqtSlot()
     def dark_measurement(self):
+        self.BDarkMeas.setEnabled(False)
+        self.wait_until_inttime_in_sync()
         self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
-        ## Set initial values
-        self.dark_meas_array = np.ones((self.average_cycles, self.array_size))
-        self.dark_measurement_bool = True
-        self.dark_counter = 0
+        self.BDarkMeas.setStyleSheet("color : yellow;")
+        self.BDarkMeas.setText("Measuring...")
+        self.brightdark_meas_worker = DarkBrightGatherer(self.average_cycles, self.array_size)
+        self.emitter.ui_data_available.connect(self.brightdark_meas_worker.gathering_counts)
+        self.brightdark_meas_worker.result.connect(self.after_dark_measurement)
+        self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
+        self.brightdark_meas_thread.start()
+
+    @pyqtSlot(object)
+    def after_dark_measurement(self, dark_mean):
+        self.emitter.ui_data_available.disconnect(self.brightdark_meas_worker.gathering_counts)
+        self.brightdark_meas_thread.quit()
+        self.brightdark_meas_thread.wait()
+        self.dark_mean = dark_mean
+        self.is_dark_data = True
+        self.BDarkMeas.setStyleSheet("color : green;")
+        self.BDarkMeas.setText("Measured")
+        self.statusBar().showMessage('Measurement of dark spectra completed', 5000)
+        self.BDarkMeas.setEnabled(True)
+        self.set_axis_range()
+        self.refresh_plot()
 
     @pyqtSlot()
     def delete_dark_measurement(self):
-        self.dark_mean = np.ones(len(self.xdata))
-        self.dark_data = False
+        self.dark_mean = np.ones(
+            len(self.xdata))  # TODO: None frees memory. Introduce None check if this causes problems --ashis
+        self.is_dark_data = False
         self.BDarkMeas.setStyleSheet("color : black;")
         self.BDarkMeas.setText("Measure (deleted)")
 
-    def gathering_dark_counts(self):
-        if self.dark_counter == 0:
-            self.BDarkMeas.setStyleSheet("color : yellow;")
-            self.BDarkMeas.setText("Measuring...")
-
-        if self.dark_counter < self.average_cycles:
-            self.dark_meas_array[self.dark_counter] = np.array(self.ydata)
-            self.dark_counter += 1
-        else:
-            self.dark_measurement_bool = False
-            self.dark_mean = np.mean(self.dark_meas_array, axis=0)
-            self.dark_data = True
-            self.BDarkMeas.setStyleSheet("color : green;")
-            self.BDarkMeas.setText("Measured")
-            self.statusBar().showMessage('Measurement of dark spectra completed', 5000)
-
     @pyqtSlot()
     def bright_measurement(self):
+        self.BBrightMeas.setEnabled(False)
+        self.wait_until_inttime_in_sync()
         self.average_cycles = int(self.LEcurave.text())
-        self.bright_meas_array = np.ones((self.average_cycles, self.array_size))
-        self.bright_measurement_bool = True
-        self.bright_counter = 0
+        self.BBrightMeas.setStyleSheet("color : yellow;")
+        self.BBrightMeas.setText("Measuring...")
+        self.brightdark_meas_worker = DarkBrightGatherer(self.average_cycles, self.array_size)
+        self.emitter.ui_data_available.connect(self.brightdark_meas_worker.gathering_counts)
+        self.brightdark_meas_worker.result.connect(self.after_bright_measurement)
+        self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
+        self.brightdark_meas_thread.start()
+
+    @pyqtSlot(object)
+    def after_bright_measurement(self, bright_mean):
+        self.emitter.ui_data_available.disconnect(self.brightdark_meas_worker.gathering_counts)
+        self.brightdark_meas_thread.quit()
+        self.brightdark_meas_thread.wait()
+        self.bright_mean = bright_mean
+        self.is_bright_data = True
+        self.BBrightMeas.setEnabled(True)
+        self.BBrightMeas.setStyleSheet("color : green;")
+        self.BBrightMeas.setText("Measured")
+        self.statusBar().showMessage('Measurement of bright spectra completed', 5000)
+        self.set_axis_range()
+        self.refresh_plot()
 
     @pyqtSlot()
     def delete_bright_measurement(self):
         self.bright_mean = np.ones(len(self.xdata))
-        self.bright_data = False
+        self.is_bright_data = False
         self.BBrightMeas.setStyleSheet("color : black;")
         self.BBrightMeas.setText("Measure (deleted)")
         self.set_axis_range()
-
-    def gathering_bright_counts(self):
-        if self.bright_counter == 0:
-            self.BBrightMeas.setStyleSheet("color : yellow;")
-            self.BBrightMeas.setText("Measuring...")
-
-        if self.bright_counter < self.average_cycles:
-            self.bright_meas_array[self.bright_counter] = np.array(self.ydata)
-            self.bright_counter += 1
-        else:
-            self.bright_measurement_bool = False
-            self.bright_mean = np.mean(self.bright_meas_array, axis=0)
-            self.bright_data = True
-            self.BBrightMeas.setStyleSheet("color : green;")
-            self.BBrightMeas.setText("Measured")
-            self.statusBar().showMessage('Measurement of bright spectra completed', 5000)
-            self.set_axis_range()
+        self.refresh_plot()
 
     @pyqtSlot()
     def press_start(self):
-        if not self.measuring:
+        if not self.is_measuring:
             self.delay = float(self.LEdeltime.text())
-            self.LEskip_positive_number()
-
+            self.LEskip.setText(utils.LEskip_positive_number(self.LEskip.text()))
             self.timer = QTimer()
             self.timer_interval = 0.1
-            self.timer.setInterval(int(self.timer_interval * 1000))
+            self.timer.setInterval(int(self.timer_interval * 1000))  # TODO: use single shot timer with delay?? --ashis
             self.timer.timeout.connect(self.delayed_start)
             self.timer.start()
         else:
-            self.measuring = False
-            self.spectra_measurement_bool = False
-            self.dis_enable_widgets(False)
-            self.save_data()
+            self.spec_thread.quit()
+            self.is_measuring = False
+            self.is_spectra_measurement = False  # TODO: Check and remove this variable --ashis
+            self.toggle_widgets(False)
+            self.save_data(self.meas_worker.spectra_raw_array, self.meas_worker.spectra_meas_array,
+                           self.meas_worker.time_meas_array)
 
     def delayed_start(self):
         self.LAelapse.setStyleSheet("color :red;")
         self.LAelapse.setText("00:{:02.2f}".format(float(round(self.delay, 2))))
         self.delay = self.delay - self.timer_interval
-
+        skip = int(self.LEskip.text())
         if self.delay <= 0:
             self.timer.stop()
             self.LAelapse.setStyleSheet("color :black;")
             self.LAelapse.setText("00:00")
-            self.spectra_measurement()
-        else:
-            pass
-
-    def spectra_measurement(self):
-        self.start_time = time()  ## Start of stopwatch
-        self.set_integration_time()  ## Reset int time to what is in entry field
-        self.spectra_meas_array = np.ones((self.total_frames, self.array_size))
-        self.spectra_raw_array = np.ones((self.total_frames, self.array_size))
-        self.time_meas_array = np.ones(self.total_frames)
-        self.spectra_meas_array[:] = np.nan
-        self.spectra_raw_array[:] = np.nan
-        self.time_meas_array[:] = np.nan
-        self.measuring = True
-        self.spectra_measurement_bool = True
-        self.spectra_counter = 0
-        self.counter = 0
-        self.array_count = 0
-
-    def gathering_spectra_counts(self):
-        skip = int(self.LEskip.text())
-
-        if self.spectra_counter == 0:
-            self.dis_enable_widgets(True)
+            self.set_integration_time()
+            self.wait_until_inttime_in_sync()
+            self.start_time = time()
+            print("Starting Worker with the parameters:")
+            print("total_frames=", self.total_frames)
+            print("array_size =", self.array_size)
+            print("skip =", skip)
+            print("is_dark_data =", self.is_dark_data)
+            print("is_bright_data =", self.is_bright_data)
+            print("dark_mean =", self.dark_mean)
+            print("Bright Mean", self.bright_mean)
+            print("timestamp=", self.start_time)
+            self.meas_worker = SpectraGatherer(total_frames=self.total_frames,
+                                               array_size=self.array_size,
+                                               skip=skip,
+                                               is_dark_data=self.is_dark_data,
+                                               is_bright_data=self.is_bright_data,
+                                               dark_mean=self.dark_mean,
+                                               bright_mean=self.bright_mean)
+            self.emitter.ui_data_available.connect(self.meas_worker.measure)
+            self.meas_worker.moveToThread(self.spec_thread)
+            self.meas_worker.finished.connect(self.spec_thread.quit)
+            self.meas_worker.finished.connect(self.meas_worker.deleteLater)
+            self.meas_worker.progress.connect(self.during_measurement)
+            self.meas_worker.result.connect(self.save_data)
+            self.spec_thread.finished.connect(self.after_measurement)
+            self.is_measuring = True
+            self.toggle_widgets(True)
             self.create_folder(True)
-
-        if self.spectra_counter < self.total_frames:
-            if self.spectra_counter == 0 or self.spectra_counter % skip == 0:
-                # self.spectra_raw_array[self.spectra_counter] = np.array(self.ydata)
-                # self.spectra_meas_array[self.spectra_counter] = np.array(self.yarray)
-                # self.time_meas_array[self.spectra_counter] = np.round(time()-self.start_time,4)
-                self.spectra_raw_array[self.array_count] = np.array(self.ydata)
-                self.spectra_meas_array[self.array_count] = np.array(self.yarray)
-                self.time_meas_array[self.array_count] = np.round(time() - self.start_time, 4)
-                self.array_count += 1
-
-            self.spectra_counter += 1
-
-        else:
-            self.time_meas_array = self.time_meas_array - self.time_meas_array[0]
-            self.spectra_measurement_bool = False
-            self.spectra_data = True
-            self.dis_enable_widgets(False)
-            self.statusBar().showMessage('Measurement finished', 5000)
-
-    def spectra_math(self):
-        if self.dark_data and not self.bright_data:
-            self.yarray = (self.ydata - self.dark_mean)
-        elif self.bright_data and not self.dark_data:
-            self.yarray = self.ydata / self.bright_mean
-        elif self.bright_data and self.dark_data:
-            self.yarray = 1 - np.divide((self.ydata - self.dark_mean), (self.bright_mean - self.dark_mean))
-        else:
-            self.yarray = self.ydata
-
-    def reset_plot(self):
-        self.canvas.axes.cla()
-        self.canvas.axes.set_xlabel('Wavelength (nm)')
-        self.canvas.axes.set_ylabel('Intensity (a.u.)')
-        self.canvas.axes.grid(True, linestyle='--')
-        self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-        # self.canvas.axes.set_xlim([400,850])
-        self.canvas.axes.set_ylim([0, 68000])
-        self.show_raw = False
-
-    def plot_spectra(self, spect):
-        self.ydata = spect
-        # print(ydata)
-        ## Check if button to collect data has been pressed
-        if self.dark_measurement_bool:
-            self.gathering_dark_counts()
-        if self.bright_measurement_bool:
-            self.gathering_bright_counts()
-        if self.spectra_measurement_bool:
-            self.gathering_spectra_counts()
-            self.during_measurement()
-
-        ## Plot the data accordingly
-        if self._plot_ref is None:  ## For initializing the plot
-            self.ydata = np.ones(len(self.xdata))
-            self._plot_ref, = self.canvas.axes.plot(self.xdata, self.ydata, 'r')
-            if not self.spectrometer:
-                self._plot_ref.set_label("Spectrometer not found: Demo Data")
-                self.canvas.axes.legend()
-            else:
-                pass
-
-        else:
-            self.spectra_math()
-            ## raw button checked
-            if self.Braw.isChecked():
-                if not self.show_raw:
-                    if self.dark_data:
-                        self._plot_re1 = self.canvas.axes.plot(self.xdata, self.dark_mean, 'b', label="Dark")
-                    if self.bright_data:
-                        self._plot_re2 = self.canvas.axes.plot(self.xdata, self.bright_mean, 'y', label="Bright")
-
-                self._plot_ref.set_ydata(self.ydata)
-                self._plot_ref.set_label("Spectra")
-                self.canvas.axes.legend()
-                self.show_raw = True
-
-            else:  ## If raw button is unchecked, clean and restart the plot
-                if self.show_raw:
-                    self.show_raw = False
-                    self.reset_plot()
-                    self._plot_ref, = self.canvas.axes.plot(self.xdata, self.ydata, 'r')
-
-                self._plot_ref.set_ydata(self.yarray)
-
-        self.canvas.draw_idle()
+            self.spec_thread.start(QThread.HighPriority)
 
     @pyqtSlot()
     def set_axis_range(self):
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-
         if self.Brange.isChecked():
-            if self.bright_data:
+            if self.is_bright_data:
                 self.canvas.axes.set_ylim([-10, 10])
             else:
                 fix_arr = np.ma.masked_invalid(self.yarray)
                 self.canvas.axes.set_ylim([min(fix_arr) * 0.9, max(fix_arr) * 1.1])
 
-        elif self.bright_data and not self.Braw.isChecked():
+        elif self.is_bright_data and not self.Braw.isChecked():
             self.canvas.axes.set_ylim([-0.5, 1.5])
             self.canvas.axes.set_xlim([380, 820])
-        elif self.bright_data and self.Braw.isChecked():
+        elif self.is_bright_data and self.Braw.isChecked():
             glob_min = np.min([np.min(self.bright_mean), np.min(self.dark_mean)])
             glob_max = np.max([np.max(self.bright_mean), np.min(self.dark_mean)])
             self.canvas.axes.set_ylim([glob_min * 0.9, glob_max * 1.1])
             self.canvas.axes.set_xlim([350, 850])
-
         else:
             self.canvas.axes.set_ylim([0, 68000])
             self.canvas.axes.set_xlim([330, 1030])
 
-    def during_measurement(self):  ## To update values in GUI
+    @pyqtSlot(int)
+    def during_measurement(self, counter):  ## To update values in GUI
         ## This updates the number of measurements that will be made
-        self.LAframes.setText(str(self.counter) + "/" + str(self.total_frames))
+        self.LAframes.setText(str(counter) + "/" + str(self.total_frames))
         ## This is to show the elapsed time
         self.elapsed_time = time() - self.start_time
         minute, second = divmod(self.elapsed_time, 60)
         self.LAelapse.setText("{:02}:{:02}".format(int(minute), int(second)))
 
-        ## Dissable widgets during the measurement time        
-        if self.counter < self.total_frames:
-            self.dis_enable_widgets(True)
+    @pyqtSlot()
+    def after_measurement(self):
+        self.toggle_widgets(False)
+        self.is_measuring = False
 
-        else:  ## Re-enable widgets after measurement is done
-            self.dis_enable_widgets(False)
-            self.counter = 0
-            self.measuring = False
-            self.save_data()
-
-        self.counter += 1
-
-    def make_heatplot(self, progress_callback):  ## Triggered at the End
+    def make_heatplot(self, spectra_raw_array, spectra_meas_array, time_meas_array):  ## Triggered at the End
         matplotlib.use('Agg')
         plt.ioff()
-
         fig = plt.figure(figsize=[8, 6])
         ax1 = fig.add_subplot(1, 1, 1)
-
-        # progress_callback.emit(None)
-
-        # xsize = len(self.time_meas_array)
-
         if self.Braw.isChecked():
-            time = self.time_meas_array
-            heatplot = self.spectra_raw_array.T
+            time = time_meas_array
+            heatplot = spectra_raw_array.T
             waveleng = self.xdata
         else:
-            time = self.time_meas_array
-            heatplot = self.spectra_meas_array.T[215:1455]
+            time = time_meas_array
+            heatplot = spectra_meas_array.T[215:1455]
             waveleng = self.xdata[215:1455]
+
+        time = time[~np.isnan(time)]
+        waveleng = waveleng[~np.isnan(waveleng)]
+        heatplot = heatplot[:, :time.shape[0]]
 
         ax1.set_title("PL spectra")
         ax1.set_xlabel("Time(seconds)")
@@ -945,50 +765,49 @@ class MainWindow(QtWidgets.QMainWindow):
         ax1.set_yticks(np.linspace(0, waveLen, 8))
         ax1.set_yticklabels(np.linspace(PLmin, PLmax, 8).astype(int))
         ax1.set_xticks(np.linspace(0, len(time), 8))
-        ax1.set_xticklabels(np.around(np.linspace(0, max(time), 8), decimals=1))
-
+        ax1.set_xticklabels(np.around(np.linspace(0, np.max(time), 8), decimals=1))
         ax1.pcolorfast(heatplot)
-
         fig.savefig(
-            self.folder + "0_preview_" + self.sample + "_heatplot.png")  # ,bbox_inches = "tight")   # save the figure to file
+            self.folder + "0_preview_" + self.sample + "_heatplot.png")
         plt.close()  # close the figure window
 
     def send_to_Qthread(self):
-        ## Create a QThread object
-        self.thread = QThread()
-        ## Create a worker object and send function to it
-        self.worker = Worker(self.get_ydata)
-        ## Whenever signal exists, send it to plot
-        self.worker.signals.progress.connect(self.plot_spectra)
-        ## Start threadpool
-        self.threadpool.start(self.worker)
+        self.plot_worker = PlotWorker(
+            is_dark_data=self.is_dark_data,
+            is_bright_data=self.is_bright_data,
+            dark_mean=self.dark_mean,
+            bright_mean=self.bright_mean,
+            canvas=self.canvas,
+            xdata=self.xdata,
+            is_spectrometer=self.is_spectrometer
+        )
+        self.emitter.ui_data_available.connect(self.plot_worker.plot_spectra)
+        self.plot_worker.moveToThread(self.plot_thread)
+        self.plot_thread.start()
 
+    @pyqtSlot()
+    def refresh_plot(self):
+        self.plot_worker.show_raw = self.Braw.isChecked()
+        self.plot_worker.is_dark_data = self.is_dark_data
+        self.plot_worker.is_bright_data = self.is_bright_data
+        self.plot_worker.dark_mean = self.dark_mean
+        self.plot_worker.bright_mean = self.bright_mean
+        if not self.Braw.isChecked():
+            self.plot_worker.reset_axes()
+
+    @pyqtSlot()
     def finished_plotting(self):
         self.statusBar().showMessage("Plotting process finished and images saved", 5000)
-
-    def Qthread_plotting(self, func):
-        ## Create a QThread object
-        self.thread = QThread()
-        ## Create a worker object and send function to it
-        self.worker = Worker(func)
-        ## Whenever signal exists, send it to plot
-        self.thread.finished.connect(self.finished_plotting)
-        ## Start threadpool
-        self.threadpool.start(self.worker)
 
     def closeEvent(self, event):
         reply = QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
+            self.spec_thread.quit()
+            self.spec_thread.wait()
+            self.plot_thread.quit()
+            self.plot_thread.wait()
             event.accept()
-            # print('Window closed')
-            if self.spectrometer:
-                self.spec.close()
+            self.process_queue.put(None)
         else:
             event.ignore()
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    w = MainWindow()
-    app.exec_()
