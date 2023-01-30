@@ -332,6 +332,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Binttime.clicked.connect(self.set_integration_time)
         self.LEinttime.returnPressed.connect(self.set_integration_time)
         self.SBinttime.sliderReleased.connect(self.scrollbar_action)
+        self.SBinttime.valueChanged.connect(self.scrollbar_action)
         self.BDarkMeas.clicked.connect(self.dark_measurement)
         self.BBrightMeas.clicked.connect(self.bright_measurement)
         self.BStart.clicked.connect(self.press_start)
@@ -477,9 +478,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def scrollbar_action(self):
-        bar = self.SBinttime.value()  ##Read scrollbar value
-        self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
-        self.set_integration_time()
+        if not self.SBinttime.isSliderDown():
+            bar = self.SBinttime.value()  ##Read scrollbar value
+            self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
+            self.set_integration_time()
 
     @pyqtSlot()
     def set_integration_time(self):
