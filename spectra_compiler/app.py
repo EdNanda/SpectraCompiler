@@ -332,12 +332,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Binttime.clicked.connect(self.set_integration_time)
         self.LEinttime.returnPressed.connect(self.set_integration_time)
         self.SBinttime.sliderReleased.connect(self.scrollbar_action)
+        self.SBinttime.valueChanged.connect(self.scrollbar_action)
         self.BDarkMeas.clicked.connect(self.dark_measurement)
         self.BBrightMeas.clicked.connect(self.bright_measurement)
         self.BStart.clicked.connect(self.press_start)
         self.LEmeatime.textChanged.connect(self.update_number_of_frames)
-        self.Brange.stateChanged.connect(self.set_axis_range)
-        self.Braw.stateChanged.connect(self.set_axis_range)
+        self.Brange.stateChanged.connect(self.refresh_plot)
         self.Braw.stateChanged.connect(self.refresh_plot)
         self.BBrightDel.clicked.connect(self.delete_bright_measurement)
         self.BDarkDel.clicked.connect(self.delete_dark_measurement)
@@ -345,16 +345,12 @@ class MainWindow(QtWidgets.QMainWindow):
     @pyqtSlot()
     def select_folder(self):
         old_folder = self.LEfolder.text()  ##Read entry line
-
         if not old_folder:  ## If empty, go to default
             old_folder = "C:/Data/"
-
         ## Select directory from selection
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Where do you want your data saved?", old_folder)
-
         if not directory:  ## if cancelled, keep the old one
             directory = old_folder
-
         self.LEfolder.setText(directory)
         self.folder = directory
 
@@ -388,7 +384,6 @@ class MainWindow(QtWidgets.QMainWindow):
         if sample:
             self.sample = self.LEsample.text()
             self.folder = self.folder + self.sample + "/"
-
             ## If sample name is duplicated, make a "-d#" folder
             if os.path.exists(self.folder):
                 self.folder = self.folder.rsplit("/", 1)[0] + "-d" + str(retry) + "/"
@@ -483,9 +478,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def scrollbar_action(self):
-        bar = self.SBinttime.value()  ##Read scrollbar value
-        self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
-        self.set_integration_time()
+        if not self.SBinttime.isSliderDown():
+            bar = self.SBinttime.value()  ##Read scrollbar value
+            self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
+            self.set_integration_time()
 
     @pyqtSlot()
     def set_integration_time(self):
@@ -594,7 +590,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BDarkMeas.setText("Measured")
         self.statusBar().showMessage('Measurement of dark spectra completed', 5000)
         self.BDarkMeas.setEnabled(True)
-        self.set_axis_range()
         self.refresh_plot()
 
     @pyqtSlot()
@@ -629,7 +624,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BBrightMeas.setStyleSheet("color : green;")
         self.BBrightMeas.setText("Measured")
         self.statusBar().showMessage('Measurement of bright spectra completed', 5000)
-        self.set_axis_range()
         self.refresh_plot()
 
     @pyqtSlot()
@@ -638,7 +632,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.is_bright_data = False
         self.BBrightMeas.setStyleSheet("color : black;")
         self.BBrightMeas.setText("Measure (deleted)")
-        self.set_axis_range()
         self.refresh_plot()
 
     @pyqtSlot()
@@ -698,28 +691,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.toggle_widgets(True)
             self.create_folder(True)
             self.spec_thread.start(QThread.HighPriority)
-
-    @pyqtSlot()
-    def set_axis_range(self):
-        self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-        if self.Brange.isChecked():
-            if self.is_bright_data:
-                self.canvas.axes.set_ylim([-10, 10])
-            else:
-                fix_arr = np.ma.masked_invalid(self.yarray)
-                self.canvas.axes.set_ylim([min(fix_arr) * 0.9, max(fix_arr) * 1.1])
-
-        elif self.is_bright_data and not self.Braw.isChecked():
-            self.canvas.axes.set_ylim([-0.5, 1.5])
-            self.canvas.axes.set_xlim([380, 820])
-        elif self.is_bright_data and self.Braw.isChecked():
-            glob_min = np.min([np.min(self.bright_mean), np.min(self.dark_mean)])
-            glob_max = np.max([np.max(self.bright_mean), np.min(self.dark_mean)])
-            self.canvas.axes.set_ylim([glob_min * 0.9, glob_max * 1.1])
-            self.canvas.axes.set_xlim([350, 850])
-        else:
-            self.canvas.axes.set_ylim([0, 68000])
-            self.canvas.axes.set_xlim([330, 1030])
 
     @pyqtSlot(int)
     def during_measurement(self, counter):  ## To update values in GUI
@@ -787,12 +758,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def refresh_plot(self):
-        self.plot_worker.show_raw = self.Braw.isChecked()
+        self.plot_worker.is_show_raw = self.Braw.isChecked()
         self.plot_worker.is_dark_data = self.is_dark_data
         self.plot_worker.is_bright_data = self.is_bright_data
         self.plot_worker.dark_mean = self.dark_mean
         self.plot_worker.bright_mean = self.bright_mean
-        if not self.Braw.isChecked():
+        self.plot_worker.is_fix_y = self.Brange.isChecked()
+        self.plot_worker.set_axis_range()
+        if not self.Braw.isChecked() or not self.Brange.isChecked():
             self.plot_worker.reset_axes()
 
     @pyqtSlot()

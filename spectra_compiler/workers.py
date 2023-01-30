@@ -36,7 +36,8 @@ class PlotWorker(QObject):
         self.bright_mean = bright_mean
         self.is_spectrometer = is_spectrometer
         self.render_buffer = None
-        self.show_raw = False
+        self.is_show_raw = False
+        self.is_fix_y = False
         self._plot_ref = None
         self._plot_re1 = None
         self._plot_re2 = None
@@ -65,7 +66,7 @@ class PlotWorker(QObject):
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
         # self.canvas.axes.set_xlim([400,850])
         self.canvas.axes.set_ylim([0, 68000])
-        self.show_raw = False
+        self.is_show_raw = False
         self._plot_re1 = None
         self._plot_re2 = None
         self._plot_ref, = self.canvas.axes.plot(self.xdata, np.ones(len(self.xdata)), 'r')
@@ -83,7 +84,7 @@ class PlotWorker(QObject):
                 self.measure_freq_list(self.timestamps)
 
     def toggle(self):
-        if self.show_raw:
+        if self.is_show_raw:
             if self.is_dark_data and self._plot_re1 is None:
                 self._plot_re1 = self.canvas.axes.plot(self.xdata, self.dark_mean, 'b', label="Dark")
             if self.is_bright_data and self._plot_re2 is None:
@@ -96,6 +97,26 @@ class PlotWorker(QObject):
                                         self.bright_mean)
             self._plot_ref.set_ydata(yarray)
         self.canvas.draw_idle()
+
+    def set_axis_range(self):
+        self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
+        if self.is_fix_y:
+            if self.is_bright_data:
+                self.canvas.axes.set_ylim([-10, 10])
+            else:
+                fix_arr = np.ma.masked_invalid(self.render_buffer)
+                self.canvas.axes.set_ylim([min(fix_arr) * 0.9, max(fix_arr) * 1.1])
+        elif self.is_bright_data and not self.is_show_raw:
+            self.canvas.axes.set_ylim([-0.5, 1.5])
+            self.canvas.axes.set_xlim([380, 820])
+        elif self.is_bright_data and self.is_show_raw:
+            glob_min = np.min([np.min(self.bright_mean), np.min(self.dark_mean)])
+            glob_max = np.max([np.max(self.bright_mean), np.min(self.dark_mean)])
+            self.canvas.axes.set_ylim([glob_min * 0.9, glob_max * 1.1])
+            self.canvas.axes.set_xlim([350, 850])
+        else:
+            self.canvas.axes.set_ylim([0, 68000])
+            self.canvas.axes.set_xlim([330, 1030])
 
 
 class SpectraGatherer(QObject):
