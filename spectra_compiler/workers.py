@@ -105,13 +105,13 @@ class PlotWorker(QObject):
         if self.is_bright_data:
             glob_min = np.min([np.min(self.bright_mean), np.min(self.dark_mean)])
             glob_max = np.max([np.max(self.bright_mean), np.max(self.dark_mean)])
+
             if self.is_show_raw:
                 self.canvas.axes.set_ylim([glob_min * 0.95, glob_max * 1.05])
             elif self.is_fix_y and not self.is_show_raw:
-                self.canvas.axes.set_ylim([-1, 1])
+                self.canvas.axes.set_ylim([-0.1, 1.1])
             else:
-                self.canvas.axes.set_ylim([-5, 5])
-                print("bright")
+                pass ## This boolean combination resets the plot by default
         elif self.is_dark_data and not self.is_bright_data:
             glob_min = np.min([np.min(fix_arr), np.min(self.dark_mean)])
             glob_max = np.max([np.max(fix_arr), np.max(self.dark_mean)])
