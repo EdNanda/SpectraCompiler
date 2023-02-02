@@ -764,7 +764,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_worker.bright_mean = self.bright_mean
         self.plot_worker.is_fix_y = self.Brange.isChecked()
         self.plot_worker.set_axis_range()
-        if not self.Braw.isChecked() or not self.Brange.isChecked():
+        if not self.Braw.isChecked() and not self.Brange.isChecked():
             self.plot_worker.reset_axes()
 
     @pyqtSlot()
