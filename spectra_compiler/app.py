@@ -537,7 +537,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self.Braw.isChecked():
             PLspecR = pd.DataFrame(spectra_raw_array.T, columns=time_meas_array)
-
             if self.is_dark_data:
                 dark = pd.DataFrame({"Dark spectra": self.dark_mean})
             if self.is_bright_data:
