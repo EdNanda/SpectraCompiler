@@ -667,15 +667,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_integration_time()
             self.wait_until_inttime_in_sync()
             self.start_time = time()
-            print("Starting Worker with the parameters:")
-            print("total_frames=", self.total_frames)
-            print("array_size =", self.array_size)
-            print("skip =", skip)
-            print("is_dark_data =", self.is_dark_data)
-            print("is_bright_data =", self.is_bright_data)
-            print("dark_mean =", self.dark_mean)
-            print("Bright Mean", self.bright_mean)
-            print("timestamp=", self.start_time)
+            # print("Starting Worker with the parameters:")
+            # print("total_frames=", self.total_frames)
+            # print("array_size =", self.array_size)
+            # print("skip =", skip)
+            # print("is_dark_data =", self.is_dark_data)
+            # print("is_bright_data =", self.is_bright_data)
+            # print("dark_mean =", self.dark_mean)
+            # print("Bright Mean", self.bright_mean)
+            # print("timestamp=", self.start_time)
             self.meas_worker = SpectraGatherer(total_frames=self.total_frames,
                                                array_size=self.array_size,
                                                skip=skip,
@@ -769,7 +769,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_worker.is_fix_y = self.Brange.isChecked()
         self.plot_worker.set_axis_range()
         if not self.Braw.isChecked() and not self.Brange.isChecked():
-            print("something")
+            # print("something")
             self.plot_worker.reset_axes()
 
     @pyqtSlot()

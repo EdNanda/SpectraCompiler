@@ -175,7 +175,7 @@ class SpectraGatherer(QObject):
             self.time_meas_array = self.time_meas_array - self.time_meas_array[0]
             self.result.emit(self.spectra_raw_array, self.spectra_meas_array, self.time_meas_array)
             self.finished.emit()
-            print('finished thread.....')
+            # print('finished thread.....')
 
 
 class DarkBrightGatherer(QObject):
@@ -195,4 +195,4 @@ class DarkBrightGatherer(QObject):
         else:
             _mean = np.mean(self.measured_array, axis=0)
             self.result.emit(_mean)
-            print('finished thread.....')
+            # print('finished thread.....')

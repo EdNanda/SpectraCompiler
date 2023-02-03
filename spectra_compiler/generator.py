@@ -25,11 +25,11 @@ class SpectroProcess(Process):
             self.xdata = _spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
             self.is_model_verified = (self.MODEL_NAME in _spec.serial_number)
-            print("spec found")
+            # print("spec found")
         else:
             self.array_size = 2046
             self.xdata = np.linspace(340, 1015, self.array_size)
-            print("spec not found")
+            # print("spec not found")
 
     def reinit_spectrometer_generator(self):
         try:
@@ -76,7 +76,7 @@ class SpectroProcess(Process):
                     inttime = self.data_from_mother.get_nowait()
                     if inttime:
                         inttime *= 1000  # convert to ms
-                        print("wait time changed (ms)", inttime)
+                        # print("wait time changed (ms)", inttime)
                     else:
                         break
                 except Empty:
