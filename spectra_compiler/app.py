@@ -195,8 +195,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.LEcurave = QLineEdit()
         self.LEcurave.setText("5")
         # self.LEcurave.setMaximumWidth(160)
-        self.BBrightMeas = QPushButton("Measure")
-        self.BBrightMeas.setStyleSheet("color : red;")
+        self.BBrightMeas = QPushButton("(Measure Dark First)")
+        self.BBrightMeas.setStyleSheet("color : gray;")
+        self.BBrightMeas.setEnabled(False)
         self.BBrightDel = QToolButton()
         self.BBrightDel.setText("\U0001F5D1")
         self.BBrightDel.setToolTip("Delete previous measurement")
@@ -537,7 +538,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self.Braw.isChecked():
             PLspecR = pd.DataFrame(spectra_raw_array.T, columns=time_meas_array)
-
             if self.is_dark_data:
                 dark = pd.DataFrame({"Dark spectra": self.dark_mean})
             if self.is_bright_data:
@@ -577,6 +577,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.brightdark_meas_worker.result.connect(self.after_dark_measurement)
         self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
         self.brightdark_meas_thread.start()
+        self.BBrightMeas.setEnabled(True)
+        self.BBrightMeas.setText("Measure")
+        self.BBrightMeas.setStyleSheet("color : green;")
 
     @pyqtSlot(object)
     def after_dark_measurement(self, dark_mean):
@@ -611,6 +614,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.brightdark_meas_worker.result.connect(self.after_bright_measurement)
         self.brightdark_meas_worker.moveToThread(self.brightdark_meas_thread)
         self.brightdark_meas_thread.start()
+        self.Brange.setChecked(True)
 
     @pyqtSlot(object)
     def after_bright_measurement(self, bright_mean):
@@ -765,6 +769,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_worker.is_fix_y = self.Brange.isChecked()
         self.plot_worker.set_axis_range()
         if not self.Braw.isChecked() and not self.Brange.isChecked():
+            print("something")
             self.plot_worker.reset_axes()
 
     @pyqtSlot()

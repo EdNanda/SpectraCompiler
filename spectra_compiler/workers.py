@@ -100,23 +100,32 @@ class PlotWorker(QObject):
 
     def set_axis_range(self):
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-        if self.is_fix_y:
-            if self.is_bright_data:
-                self.canvas.axes.set_ylim([-10, 10])
-            else:
-                fix_arr = np.ma.masked_invalid(self.render_buffer)
-                self.canvas.axes.set_ylim([min(fix_arr) * 0.9, max(fix_arr) * 1.1])
-        elif self.is_bright_data and not self.is_show_raw:
-            self.canvas.axes.set_ylim([-0.5, 1.5])
-            self.canvas.axes.set_xlim([380, 820])
-        elif self.is_bright_data and self.is_show_raw:
+        fix_arr = np.ma.masked_invalid(self.render_buffer)
+
+        if self.is_bright_data:
             glob_min = np.min([np.min(self.bright_mean), np.min(self.dark_mean)])
-            glob_max = np.max([np.max(self.bright_mean), np.min(self.dark_mean)])
-            self.canvas.axes.set_ylim([glob_min * 0.9, glob_max * 1.1])
-            self.canvas.axes.set_xlim([350, 850])
+            glob_max = np.max([np.max(self.bright_mean), np.max(self.dark_mean)])
+
+            if self.is_show_raw:
+                self.canvas.axes.set_ylim([glob_min * 0.95, glob_max * 1.05])
+            elif self.is_fix_y and not self.is_show_raw:
+                self.canvas.axes.set_ylim([-0.1, 1.1])
+            else:
+                pass ## This boolean combination resets the plot by default
+        elif self.is_dark_data and not self.is_bright_data:
+            glob_min = np.min([np.min(fix_arr), np.min(self.dark_mean)])
+            glob_max = np.max([np.max(fix_arr), np.max(self.dark_mean)])
+            if self.is_fix_y or self.is_show_raw:
+                self.canvas.axes.set_ylim([glob_min * 0.95, glob_max * 1.05])
+            if self.is_fix_y or not self.is_show_raw:
+                self.canvas.axes.set_ylim([0, glob_max * 1.05])
+            else:
+                self.canvas.axes.set_ylim([0, 68000])
         else:
-            self.canvas.axes.set_ylim([0, 68000])
-            self.canvas.axes.set_xlim([330, 1030])
+            if self.is_fix_y:
+                self.canvas.axes.set_ylim([min(fix_arr) * 0.9, max(fix_arr) * 1.1])
+            else:
+                self.canvas.axes.set_ylim([0, 68000])
 
 
 class SpectraGatherer(QObject):
