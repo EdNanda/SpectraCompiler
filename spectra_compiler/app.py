@@ -7,11 +7,13 @@ from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 import matplotlib
+
 matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+
 rcParams.update({'figure.autolayout': True})
 import pandas as pd
 import numpy as np
@@ -24,7 +26,7 @@ from workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
 
 class MplCanvas(FigureCanvasQTAgg):
     '''
-    This makes the plot happen
+    Initial setup and placeholder for GUI plot
     '''
 
     def __init__(self, parent=None, width=5, height=4, dpi=300, tight_layout=True):
@@ -34,9 +36,8 @@ class MplCanvas(FigureCanvasQTAgg):
         self.axes.set_ylabel('Intensity (a.u.)')
         self.axes.grid(True, linestyle='--')
         self.axes.set_xlim([330, 1030])
-        # self.axes.set_xlim([400,850])
         self.axes.set_ylim([0, 68000])
-        # fig.tight_layout() # to remove warning --ashis
+        fig.tight_layout()
         super(MplCanvas, self).__init__(fig)
 
 
@@ -45,26 +46,25 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, icon_path: pathlib.Path, is_spectrometer: bool, emitter, child_process_queue, xdata, array_size,
                  *args, **kwargs):
         '''
-        Initialize parameters
+        QT main window class handling all user interactive widgets and their actions
         :param args:
         :param kwargs:
         '''
         super(MainWindow, self).__init__(*args, **kwargs)
-        self.is_dark_measurement = False  # TODO: change bool variable naming convention --ashis
-        self.is_spectra_measurement = False
+        self.is_dark_measurement = False
         self.is_dark_data = False
         self.is_bright_data = False
         self.is_spectra_data = False
         self.is_show_raw = False
         self.is_measuring = False
         self.current_inttime_ms: float = 0
-        self.dark_mean = None  # TODO: add all missing variables here --ashis
+        self.dark_mean = None
         self.bright_mean = None
         self.setWindowTitle("Spectra Compiler")
         self.setWindowIcon(QtGui.QIcon(str(icon_path)))
         np.seterr(divide='ignore', invalid='ignore')
 
-        self.is_spectrometer = is_spectrometer  # TODO: Remove unused
+        self.is_spectrometer = is_spectrometer
         self.process_queue = child_process_queue
         self.xdata = xdata
         self.array_size = array_size
@@ -80,63 +80,60 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Program by Edgar Nandayapa - 2021", 10000)
 
         self.create_widgets()
-        self.arr_scrbar = utils.array_for_scrollbar()  ##This function makes an array for the scrollbar
-        self.set_integration_time()  ##This resets the starting integration time value
-        self.button_actions()  ##Set button actions
+        self.arr_scrbar = utils.array_for_scrollbar()  # This function makes an array for the scrollbar
+        self.set_integration_time()  # This resets the starting integration time value
+        self.button_actions()  # Set button actions
 
     def create_widgets(self):
         '''
-        Setups up the GUI
+        Setups up the GUI widgets and layout
         '''
         widget = QWidget()
-        layH1 = QHBoxLayout()  ##Main (horizontal) Layout
+        layH1 = QHBoxLayout()  # Main (horizontal) Layout
 
-        ## Create the maptlotlib FigureCanvas for plotting
+        #  Create the maptlotlib FigureCanvas for plotting
         self.canvas = MplCanvas(self, width=5, height=4, dpi=100)
         # self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
-        self.canvas.setMinimumWidth(600)  ##Fix width so it doesn't change
+        self.canvas.setMinimumWidth(600)  # Fix width so it doesn't change
         self.canvas.setMinimumHeight(450)
         self.setCentralWidget(self.canvas)
         self._plot_ref = None
-        ## Add a toolbar to control plotting area
+        #  Add a toolbar to control plotting area
         toolbar = NavigationToolbar(self.canvas, self)
 
-        self.Braw = QCheckBox("Show Raw Data")  ## Button to select visualization
-        self.Brange = QCheckBox("Fix y-axis")  ## Button to select visualization
+        self.Braw = QCheckBox("Show Raw Data")  #  Button to select visualization
+        self.Brange = QCheckBox("Fix y-axis")  #  Button to select visualization
         self.BSavePlot = QCheckBox("Create heatplot")
         self.BSavePlot.setChecked(True)
 
-        ### Place all widgets
-        ## First in a grid
+        # # Place all widgets
+        #  First in a grid
         LBgrid = QGridLayout()
         LBgrid.addWidget(QLabel(" "), 0, 0)
         LBgrid.addWidget(self.Braw, 0, 1)
         LBgrid.addWidget(self.Brange, 0, 2)
         LBgrid.addWidget(self.BSavePlot, 0, 3)
         LBgrid.addWidget(QLabel(" "), 0, 4)
-        ## Add to (first) vertical layout
+        #  Add to (first) vertical layout
         layV1 = QtWidgets.QVBoxLayout()
-        ## Add Widgets to the layout
+        #  Add Widgets to the layout
         layV1.addWidget(toolbar)
         layV1.addWidget(self.canvas)
         layV1.addLayout(LBgrid)
 
-        ## Add first vertical layout to the main horizontal one
+        #  Add first vertical layout to the main horizontal one
         layH1.addLayout(layV1, 5)
 
-        ### Make second vertical layout for measurement settings
+        # # Make second vertical layout for measurement settings
         layV2 = QtWidgets.QVBoxLayout()
-        verticalSpacerV2 = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)  ## To center the layout
+        verticalSpacerV2 = QSpacerItem(20, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)  #  To center the layout
 
-        ## Relevant fields for sample, user and folder names
+        #  Relevant fields for sample, user and folder names
         self.LEsample = QLineEdit()
         self.LEuser = QLineEdit()
         self.LEfolder = QLineEdit()
-        # self.LEsample.setMaximumWidth(350)
-        # self.LEuser.setMaximumWidth(350)
-        # self.LEfolder.setMaximumWidth(350)
 
-        ## Make a grid layout and add labels and fields to it
+        #  Make a grid layout and add labels and fields to it
         LGsetup = QGridLayout()
         LGsetup.addWidget(QLabel("Sample:"), 0, 0)
         LGsetup.addWidget(self.LEsample, 0, 1)
@@ -151,27 +148,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Bfolder.setToolTip("Choose a folder where to save the data")
         LGsetup.addWidget(self.Bfolder, 2, 2)
 
-        ## Set defaults
+        #  Set defaults
         self.Bpath.setText("\U0001F4C6")
         self.Bfolder.setText("\U0001F4C1")
         self.LEfolder.setText("C:/Data/")
 
-        ## Second set of setup values
+        #  Second set of setup values
         LTsetup = QGridLayout()
         self.LEinttime = QLineEdit()
         self.LEdeltime = QLineEdit()
         self.LEmeatime = QLineEdit()
         self.LEskip = QLineEdit()
-        # self.LEinttime.setMaximumWidth(160)
-        # self.LEdeltime.setMaximumWidth(160)
-        # self.LEmeatime.setMaximumWidth(160)
+
         self.Binttime = QToolButton()
         self.Binttime.setText("SET")
         self.SBinttime = QScrollBar()
         self.SBinttime.setOrientation(Qt.Horizontal)
         self.SBinttime.setStyleSheet("background : white;")
 
-        ## Position labels and field in a grid
+        #  Position labels and field in a grid
         LTsetup.addWidget(QLabel(" "), 0, 0)
         LTsetup.addWidget(QLabel("Integration Time (s)"), 1, 0)
         LTsetup.addWidget(self.LEinttime, 1, 1)
@@ -185,13 +180,13 @@ class MainWindow(QtWidgets.QMainWindow):
         LTsetup.addWidget(self.LEskip, 5, 1)
         LTsetup.addWidget(QLabel(" "), 6, 0)
 
-        ## Set defaults
+        #  Set defaults
         self.LEinttime.setText("0.2")
         self.LEdeltime.setText("0")
         self.LEmeatime.setText("10")
         self.LEskip.setText("0")
 
-        ## Third set of setup values
+        #  Third set of setup values
         self.LEcurave = QLineEdit()
         self.LEcurave.setText("5")
         # self.LEcurave.setMaximumWidth(160)
@@ -206,12 +201,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BDarkDel = QToolButton()
         self.BDarkDel.setText("\U0001F5D1")
         self.BDarkDel.setToolTip("Delete previous measurement")
-        # Lsetup = QFormLayout()
-        # Lsetup.addRow(" ",QFrame())
-        # Lsetup.addRow("Bright measurement",self.BBrightMeas)
-        # Lsetup.addRow("Dark measurement",self.BDarkMeas)
-        # Lsetup.addRow("Curves to average",self.LEcurave)
-        # Lsetup.addRow(" ",QFrame())
+
         Lsetup = QGridLayout()
         Lsetup.addWidget(QLabel(" "), 0, 0)
         Lsetup.addWidget(QLabel("Bright measurement"), 1, 0)
@@ -224,7 +214,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Lsetup.addWidget(self.LEcurave, 3, 1)
         Lsetup.addWidget(QLabel(" "), 4, 0)
 
-        ## Four set of setup values
+        #  Four set of setup values
         LGlabels = QGridLayout()
         self.LAelapse = QLabel("00:00")
         self.LAelapse.setFont(QtGui.QFont("Arial", 10, weight=QtGui.QFont.Bold))
@@ -238,9 +228,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.BStart.setFont(QFont("Arial", 14, QFont.Bold))
         self.BStart.setStyleSheet("color : green;")
         LGlabels.addWidget(self.BStart, 1, 0, 1, 4)
-        # Lsetup.addRow(" ",QFrame())
 
-        ## Position all these sets into the second layout V2
+        #  Position all these sets into the second layout V2
         layV2.addItem(verticalSpacerV2)
         layV2.addLayout(LGsetup)
         layV2.addLayout(LTsetup)
@@ -248,15 +237,15 @@ class MainWindow(QtWidgets.QMainWindow):
         layV2.addLayout(LGlabels)
         layV2.addItem(verticalSpacerV2)
 
-        ## Add to main horizontal layout with a spacer (for good looks)
+        #  Add to main horizontal layout with a spacer (for good looks)
         horizontalSpacerH1 = QSpacerItem(10, 70, QSizePolicy.Minimum, QSizePolicy.Minimum)
         layH1.addItem(horizontalSpacerH1)
         layH1.addLayout(layV2, 3)
 
-        ### Make third vertical layout for metadata
+        # # Make third vertical layout for metadata
         layV3 = QtWidgets.QVBoxLayout()
 
-        ## List of relevant values
+        #  List of relevant values
         self.exp_labels = ["Material", "Additives", "Concentration", "Solvents", "Solvents Ratio", "Substrate"]
         self.exp_vars = []
         self.glv_labels = ["Temperature ('C)", "Water content (ppm)", "Oxygen content (ppm)"]
@@ -268,7 +257,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setup_vals = [self.LEsample, self.LEuser, self.LEfolder, self.LEinttime, self.LEdeltime, self.LEmeatime,
                            self.LEcurave]
 
-        ## Make a new layout and position relevant values
+        #  Make a new layout and position relevant values
         LmDataExp = QFormLayout()
         LmDataExp.addRow(QLabel('EXPERIMENT VARIABLES'))
 
@@ -302,19 +291,17 @@ class MainWindow(QtWidgets.QMainWindow):
         LGmeta.addWidget(self.BsaveM, 0, 2)
         LGmeta.addWidget(self.BloadM, 0, 3)
 
-        ## Position layouts inside of the third vertical layout V3
+        #  Position layouts inside of the third vertical layout V3
         layV3.addItem(verticalSpacerV2)
         layV3.addLayout(LmDataExp)
         layV3.addLayout(LmDataBox)
         layV3.addLayout(LGmeta)
         layV3.addItem(verticalSpacerV2)
 
-        ## Add to main horizontal layout with a spacer (for good looks)
+        #  Add to main horizontal layout with a spacer (for good looks)
         horizontalSpacerH2 = QSpacerItem(30, 70, QSizePolicy.Minimum, QSizePolicy.Minimum)
         layH1.addItem(horizontalSpacerH2)
         layH1.addLayout(layV3, 2)
-
-        # self.statusBar = QStatusBar()
 
         widget.setLayout(layH1)
         self.setCentralWidget(widget)
@@ -345,20 +332,26 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def select_folder(self):
-        old_folder = self.LEfolder.text()  ##Read entry line
-        if not old_folder:  ## If empty, go to default
+        """
+        Allows user to select a folder using windows interface
+        """
+        old_folder = self.LEfolder.text()  # Read entry line
+        if not old_folder:  #  If empty, go to default
             old_folder = "C:/Data/"
-        ## Select directory from selection
+        #  Select directory from selection
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Where do you want your data saved?", old_folder)
-        if not directory:  ## if cancelled, keep the old one
+        if not directory:  #  if cancelled, keep the old one
             directory = old_folder
         self.LEfolder.setText(directory)
         self.folder = directory
 
-        ## Arrow function, to create folderpath with User and Date
+        #  Arrow function, to create folderpath with User and Date
 
     @pyqtSlot()
     def automatic_folder(self):
+        """
+        Sets a folder up, with the date as name, under the selected username
+        """
         user = self.LEuser.text()
         folder = self.LEfolder.text()
         date = datetime.now().strftime("%Y%m%d")
@@ -376,16 +369,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Bpath.setEnabled(False)
 
     def create_folder(self, sample, retry=1):
+        """
+        Create folder with specific name. If name exists, add a number to the name
+        @param sample: sets folder name with the sample's one
+        @param retry: number increases if repeated
+        """
         self.folder = self.LEfolder.text()
         if self.folder[-1] != "/":
-            self.folder = self.folder + "/"  ## Add "/" if non existent
+            self.folder = self.folder + "/"  #  Add "/" if non existent
             self.LEfolder.setText(self.folder)
         else:
             pass
         if sample:
             self.sample = self.LEsample.text()
             self.folder = self.folder + self.sample + "/"
-            ## If sample name is duplicated, make a "-d#" folder
+            #  If sample name is duplicated, make a "-d#" folder
             if os.path.exists(self.folder):
                 self.folder = self.folder.rsplit("/", 1)[0] + "-d" + str(retry) + "/"
                 if os.path.exists(self.folder):
@@ -393,8 +391,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     self.create_folder(True, retry)
                 self.statusBar().showMessage("Sample is duplicated", 10000)
 
-        ##If folders don't exist, make them
-        if not os.path.exists(self.folder):
+        if not os.path.exists(self.folder):  # If folders don't exist, make them
             os.makedirs(self.folder)
             self.statusBar().showMessage("Folder " + self.folder + " created", 5000)
         else:
@@ -402,6 +399,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def save_meta(self):
+        """
+        Collects and saves a csv file containing metadata
+        """
         self.create_folder(False)
         self.gather_all_metadata()
         metadata = pd.DataFrame.from_dict(self.meta_dict, orient='index')
@@ -410,11 +410,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def load_meta(self):
+        """
+        Allows you to select a file, and then populates metadata fields with that information
+        """
         folder = self.LEfolder.text()
         metafile = QtWidgets.QFileDialog.getOpenFileName(self, "Choose your metadata file", folder)
-        # print(metafile[0])
         metadata = pd.read_csv(metafile[0], header=None, index_col=0, squeeze=True, nrows=21)
-        # print(metadata)
         labels = self.setup_labs + self.exp_labels
         objects = self.setup_vals + self.exp_vars
 
@@ -434,17 +435,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage("Metadata successfully loaded", 5000)
 
     def gather_all_metadata(self):
+        """
+        Creates dictionaries containing all relevant metadata
+        """
         self.sample = self.LEsample.text()
-        self.meta_dict = {}  ## All variables will be collected here
-        ## Gather all relevant information
-        # addit_data = [self.dark_data, self.bright_data]
-        # addit_labl = ["Dark measurement", "Bright measurement"]
+        self.meta_dict = {}  #  All variables will be collected here
 
         all_metaD_labs = self.setup_labs + self.exp_labels + self.glv_labels
         all_metaD_vals = self.setup_vals + self.exp_vars + self.glv_vars
 
-        ## Add data to dictionary
-        try:
+        try:  # Add data to dictionary
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(self.start_time))
         except:
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(time()))
@@ -461,11 +461,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.meta_dict["Bright measurement"] = self.is_bright_data
 
         self.meta_dict[
-            "Comments"] = self.com_labels.toPlainText()  ## This field has a diffferent format than the others
+            "Comments"] = self.com_labels.toPlainText()  #  This field has a diffferent format than the others
 
-    ## To update the field with total number of measurement frames
     @pyqtSlot()
     def update_number_of_frames(self):
+        """
+            To update the field with total number of measurement frames
+        """
         try:
             total_time = float(self.LEmeatime.text())
         except:
@@ -479,35 +481,40 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def scrollbar_action(self):
+        """
+        Re-adjusts plot when slider is clicked
+        """
         if not self.SBinttime.isSliderDown():
-            bar = self.SBinttime.value()  ##Read scrollbar value
-            self.LEinttime.setText(str(self.arr_scrbar[bar]))  ##Put value on entryline
+            bar = self.SBinttime.value()  # Read scrollbar value
+            self.LEinttime.setText(str(self.arr_scrbar[bar]))  # Put value on entryline
             self.set_integration_time()
 
     @pyqtSlot()
     def set_integration_time(self):
-        # print('set_integration_time')
+        """
+        Updates spectrometer's integration time
+        """
         try:
             inttime = self.LEinttime.text()
-            # self.yworker.set_intime(inttime)
-            inttime = float(inttime.replace(',', '.'))  ## Read Entry field
+            inttime = float(inttime.replace(',', '.'))  #  Read Entry field
         except:
             inttime = 0.1
-        array_sb = np.array(self.arr_scrbar)  ## Load array of scrollbar values
-        pos = np.abs(array_sb - inttime).argmin()  ## Find location of closest value in array
+        array_sb = np.array(self.arr_scrbar)  # Load array of scrollbar values
+        pos = np.abs(array_sb - inttime).argmin()  # Find location of closest value in array
 
-        ## Set Scrollbar with respect to value chosen
-        if array_sb[pos] - inttime == 0:
+        if array_sb[pos] - inttime == 0:  # Set Scrollbar with respect to value chosen
             self.SBinttime.setValue(pos)
         else:
             self.SBinttime.setValue(pos)
             self.LEinttime.setText(str(inttime))
-        ## Update frames label
-        self.update_number_of_frames()
+        self.update_number_of_frames()  # Update frames label
         self.current_inttime_ms = inttime * 1000
         self.process_queue.put(inttime)
 
     def wait_until_inttime_in_sync(self):
+        """
+        Delays measurement attempts in case live integration time does not match the chosen one
+        """
         self.statusBar().showMessage('Waiting for integration times to be in sync.\tDo not click anything.')
         while not abs(self.current_inttime_ms - self.plot_worker.current_mean_frequency_ms) <= 10:  # 10ms tolerance
             QApplication.processEvents()
@@ -515,7 +522,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.statusBar().showMessage('Integration times are synced.')
 
     def toggle_widgets(self, status):
-        ##Disable the following buttons and fields
+        """
+        Disables QT widgets and renames buttons if process is running or not
+        @param status: 
+        """
+        # Disable the following buttons and fields
         wi_dis = [self.LEinttime, self.Binttime, self.SBinttime,  # self.BStart,
                   self.LEsample, self.LEuser, self.LEfolder, self.BBrightMeas,
                   self.BDarkMeas, self.LEdeltime, self.LEmeatime, self.Bfolder,
@@ -532,6 +543,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot(object, object, object)
     def save_data(self, spectra_raw_array, spectra_meas_array, time_meas_array):
+        """
+        Collects all relevant data & metadata and saves it into a csv file
+        @param spectra_raw_array: List containing spectra data as measured
+        @param spectra_meas_array: List containing spectra data as calculated
+        @param time_meas_array:  List containing measurement times
+        """
         self.gather_all_metadata()
         metadata = pd.DataFrame.from_dict(self.meta_dict, orient='index')
         wave = pd.DataFrame({"Wavelength (nm)": self.xdata})
@@ -556,7 +573,7 @@ class MainWindow(QtWidgets.QMainWindow):
             PLspec = pd.DataFrame(spectra.T, columns=time_meas_array)
             spectral_data = pd.concat([wave, PLspec], axis=1, join="inner")
 
-        ## Remove all unused columns
+        #  Remove all unused columns
         spectral_data = spectral_data.dropna(axis=1, how="all")
         filename = self.folder + self.sample + "_PL_measurement.csv"
         metadata.to_csv(filename, header=False)
@@ -567,9 +584,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def dark_measurement(self):
+        """
+        Tasks when measuring a dark spectra
+        """
         self.BDarkMeas.setEnabled(False)
         self.wait_until_inttime_in_sync()
-        self.average_cycles = int(self.LEcurave.text())  ## Read number in GUI
+        self.average_cycles = int(self.LEcurave.text())  #  Read number in GUI
         self.BDarkMeas.setStyleSheet("color : yellow;")
         self.BDarkMeas.setText("Measuring...")
         self.brightdark_meas_worker = DarkBrightGatherer(self.average_cycles, self.array_size)
@@ -583,6 +603,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot(object)
     def after_dark_measurement(self, dark_mean):
+        """
+        Exit tasks after dark spectra has been collected
+        @param dark_mean: List containing the dark spectra
+        """
         self.emitter.ui_data_available.disconnect(self.brightdark_meas_worker.gathering_counts)
         self.brightdark_meas_thread.quit()
         self.brightdark_meas_thread.wait()
@@ -596,14 +620,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def delete_dark_measurement(self):
-        self.dark_mean = np.ones(
-            len(self.xdata))  # TODO: None frees memory. Introduce None check if this causes problems --ashis
+        """
+        Action of deleting dark spectra
+        """
+        self.dark_mean = None
+        self.dark_mean = np.ones(len(self.xdata))
         self.is_dark_data = False
         self.BDarkMeas.setStyleSheet("color : black;")
         self.BDarkMeas.setText("Measure (deleted)")
 
     @pyqtSlot()
     def bright_measurement(self):
+        """
+        Tasks when measuring a bright spectra
+        """
         self.BBrightMeas.setEnabled(False)
         self.wait_until_inttime_in_sync()
         self.average_cycles = int(self.LEcurave.text())
@@ -618,6 +648,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot(object)
     def after_bright_measurement(self, bright_mean):
+        """
+        Exit tasks after bright spectra has been collected
+        @param bright_mean: List containing the bright spectra
+        """
         self.emitter.ui_data_available.disconnect(self.brightdark_meas_worker.gathering_counts)
         self.brightdark_meas_thread.quit()
         self.brightdark_meas_thread.wait()
@@ -631,6 +665,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def delete_bright_measurement(self):
+        """
+        Action of deleting bright spectra
+        """
         self.bright_mean = np.ones(len(self.xdata))
         self.is_bright_data = False
         self.BBrightMeas.setStyleSheet("color : black;")
@@ -639,23 +676,28 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def press_start(self):
+        """
+        Actions to start collecting spectra
+        """
         if not self.is_measuring:
             self.delay = float(self.LEdeltime.text())
             self.LEskip.setText(utils.LEskip_positive_number(self.LEskip.text()))
             self.timer = QTimer()
             self.timer_interval = 0.1
-            self.timer.setInterval(int(self.timer_interval * 1000))  # TODO: use single shot timer with delay?? --ashis
+            self.timer.setInterval(int(self.timer_interval * 1000))
             self.timer.timeout.connect(self.delayed_start)
             self.timer.start()
         else:
             self.spec_thread.quit()
             self.is_measuring = False
-            self.is_spectra_measurement = False  # TODO: Check and remove this variable --ashis
             self.toggle_widgets(False)
             self.save_data(self.meas_worker.spectra_raw_array, self.meas_worker.spectra_meas_array,
                            self.meas_worker.time_meas_array)
 
     def delayed_start(self):
+        """
+        Delays the measurement start by selected time, displaying a countdown
+        """
         self.LAelapse.setStyleSheet("color :red;")
         self.LAelapse.setText("00:{:02.2f}".format(float(round(self.delay, 2))))
         self.delay = self.delay - self.timer_interval
@@ -667,15 +709,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.set_integration_time()
             self.wait_until_inttime_in_sync()
             self.start_time = time()
-            # print("Starting Worker with the parameters:")
-            # print("total_frames=", self.total_frames)
-            # print("array_size =", self.array_size)
-            # print("skip =", skip)
-            # print("is_dark_data =", self.is_dark_data)
-            # print("is_bright_data =", self.is_bright_data)
-            # print("dark_mean =", self.dark_mean)
-            # print("Bright Mean", self.bright_mean)
-            # print("timestamp=", self.start_time)
             self.meas_worker = SpectraGatherer(total_frames=self.total_frames,
                                                array_size=self.array_size,
                                                skip=skip,
@@ -696,20 +729,28 @@ class MainWindow(QtWidgets.QMainWindow):
             self.spec_thread.start(QThread.HighPriority)
 
     @pyqtSlot(int)
-    def during_measurement(self, counter):  ## To update values in GUI
-        ## This updates the number of measurements that will be made
+    def during_measurement(self, counter):
+        """
+        To update values in GUI
+        """
+        #  This updates the number of measurements that will be made
         self.LAframes.setText(str(counter) + "/" + str(self.total_frames))
-        ## This is to show the elapsed time
         self.elapsed_time = time() - self.start_time
         minute, second = divmod(self.elapsed_time, 60)
         self.LAelapse.setText("{:02}:{:02}".format(int(minute), int(second)))
 
     @pyqtSlot()
     def after_measurement(self):
+        """
+        Exit actions after spectra has been collected
+        """
         self.toggle_widgets(False)
         self.is_measuring = False
 
-    def make_heatplot(self, spectra_raw_array, spectra_meas_array, time_meas_array):  ## Triggered at the End
+    def make_heatplot(self, spectra_raw_array, spectra_meas_array, time_meas_array):
+        """
+        Triggered at the End
+        """
         matplotlib.use('Agg')
         plt.ioff()
         fig = plt.figure(figsize=[8, 6])
@@ -735,7 +776,7 @@ class MainWindow(QtWidgets.QMainWindow):
         PLmin = np.min(waveleng)
         PLmax = np.max(waveleng)
 
-        ## fix axis ticks so they match the data (else they are array positions)
+        #  fix axis ticks so they match the data (else they are array positions)
         ax1.set_yticks(np.linspace(0, waveLen, 8))
         ax1.set_yticklabels(np.linspace(PLmin, PLmax, 8).astype(int))
         ax1.set_xticks(np.linspace(0, len(time), 8))
@@ -746,6 +787,9 @@ class MainWindow(QtWidgets.QMainWindow):
         plt.close()  # close the figure window
 
     def send_to_Qthread(self):
+        """
+        Starts parallel process for the different spectra collecting actions (raw, dark, bright)
+        """
         self.plot_worker = PlotWorker(
             is_dark_data=self.is_dark_data,
             is_bright_data=self.is_bright_data,
@@ -761,6 +805,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot()
     def refresh_plot(self):
+        """
+        Resets status of plot. Mainly to remove legend and frozen curves after desactivating is_show_raw
+        """
         self.plot_worker.is_show_raw = self.Braw.isChecked()
         self.plot_worker.is_dark_data = self.is_dark_data
         self.plot_worker.is_bright_data = self.is_bright_data
@@ -769,14 +816,20 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plot_worker.is_fix_y = self.Brange.isChecked()
         self.plot_worker.set_axis_range()
         if not self.Braw.isChecked() and not self.Brange.isChecked():
-            # print("something")
             self.plot_worker.reset_axes()
 
     @pyqtSlot()
     def finished_plotting(self):
+        """
+        Displays end of event in status bar
+        """
         self.statusBar().showMessage("Plotting process finished and images saved", 5000)
 
     def closeEvent(self, event):
+        """
+        Actions when closing the app
+        @param event: 
+        """
         reply = QMessageBox.question(self, 'Window Close', 'Are you sure you want to close the window?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:

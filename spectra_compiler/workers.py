@@ -4,7 +4,6 @@ from PyQt5.QtCore import QTimer
 from multiprocessing import Pipe
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from generator import SpectraReading
-import time
 
 
 class Emitter(QThread):
@@ -15,6 +14,9 @@ class Emitter(QThread):
         self.data_from_process = from_process
 
     def run(self):
+        """
+        Emits collected List from spectrometer (ydata)
+        """
         while True:
             try:
                 ydata = self.data_from_process.recv()
@@ -50,15 +52,25 @@ class PlotWorker(QObject):
         self.init_frequency_measure()
 
     def init_frequency_measure(self):
+        """
+        Clears timestamps List and sets frequency to 0
+        """
         self.timestamps = []
         self.current_mean_frequency_ms: float = 0
 
     def measure_freq_list(self, timestamps: list):
+        """
+        Populates List containing timestamps
+        @param timestamps:
+        """
         init_time = timestamps[0]
         _timestamps = [(timestamp - init_time) for timestamp in timestamps]
         self.current_mean_frequency_ms = 1000 * sum(_timestamps) / (2 * self.n_measure_cycles)
 
     def reset_axes(self):
+        """
+        Resets plot status to initial conditions (blank)
+        """
         self.canvas.axes.cla()
         self.canvas.axes.set_xlabel('Wavelength (nm)')
         self.canvas.axes.set_ylabel('Intensity (a.u.)')
@@ -76,6 +88,10 @@ class PlotWorker(QObject):
 
     @pyqtSlot(object)
     def plot_spectra(self, spect: SpectraReading):
+        """
+        Fixes timestamps
+        @param spect:
+        """
         self.render_buffer = spect.data
         if self.is_measure_frequency:
             self.timestamps.append(spect.timestamp)
@@ -84,6 +100,9 @@ class PlotWorker(QObject):
                 self.measure_freq_list(self.timestamps)
 
     def toggle(self):
+        """
+        Fix displayed curves in plot regarding what has been selected
+        """
         if self.is_show_raw:
             if self.is_dark_data and self._plot_re1 is None:
                 self._plot_re1 = self.canvas.axes.plot(self.xdata, self.dark_mean, 'b', label="Dark")
@@ -99,6 +118,9 @@ class PlotWorker(QObject):
         self.canvas.draw_idle()
 
     def set_axis_range(self):
+        """
+        Fixes plot axis limits with respect to what has been selected (bright and dark spectra / raw and fix_y)
+        """
         self.canvas.axes.set_xlim([min(self.xdata) * 0.98, max(self.xdata) * 1.02])
         fix_arr = np.ma.masked_invalid(self.render_buffer)
 
@@ -111,7 +133,7 @@ class PlotWorker(QObject):
             elif self.is_fix_y and not self.is_show_raw:
                 self.canvas.axes.set_ylim([-0.1, 1.1])
             else:
-                pass ## This boolean combination resets the plot by default
+                pass  # This boolean combination resets the plot by default
         elif self.is_dark_data and not self.is_bright_data:
             glob_min = np.min([np.min(fix_arr), np.min(self.dark_mean)])
             glob_max = np.max([np.max(fix_arr), np.max(self.dark_mean)])
@@ -151,11 +173,18 @@ class SpectraGatherer(QObject):
 
     @pyqtSlot(object)
     def measure(self, reading: SpectraReading):
+        """
+        Collect measured spectra and do necessary math to it
+        @param reading:
+        """
         spect = reading.data
         yarray = utils.spectra_math(spect, self.is_dark_data, self.is_bright_data, self.dark_mean, self.bright_mean)
         self.gathering_spectra_counts(spect, yarray, reading.timestamp)
 
     def init_spectra_measurement(self):
+        """
+        Resets lists and counters to begin new measurement
+        """
         self.spectra_meas_array[:] = np.nan
         self.spectra_raw_array[:] = np.nan
         self.time_meas_array[:] = np.nan
@@ -163,6 +192,12 @@ class SpectraGatherer(QObject):
         self.array_count = 0
 
     def gathering_spectra_counts(self, ydata, yarray, timestamp):
+        """
+        Collect lists of spectra into a predefined matrix
+        @param ydata: list of measured spectra
+        @param yarray: list of calculated data from spectra
+        @param timestamp: float of elapsed time
+        """
         if self.spectra_counter < self.total_frames:
             if self.spectra_counter == 0 or (self.spectra_counter % self.skip) == 0:
                 self.spectra_raw_array[self.array_count] = ydata
@@ -175,7 +210,6 @@ class SpectraGatherer(QObject):
             self.time_meas_array = self.time_meas_array - self.time_meas_array[0]
             self.result.emit(self.spectra_raw_array, self.spectra_meas_array, self.time_meas_array)
             self.finished.emit()
-            # print('finished thread.....')
 
 
 class DarkBrightGatherer(QObject):
@@ -189,10 +223,13 @@ class DarkBrightGatherer(QObject):
 
     @pyqtSlot(object)
     def gathering_counts(self, reading: SpectraReading):
+        """
+        Collects data specifically for dark and bright conditions
+        @param reading: list of spectra data
+        """
         if self.counter < self.average_cycles:
             self.measured_array[self.counter] = reading.data
             self.counter += 1
         else:
             _mean = np.mean(self.measured_array, axis=0)
             self.result.emit(_mean)
-            # print('finished thread.....')
