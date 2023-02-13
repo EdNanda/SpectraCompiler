@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Edgar Nandayapa (Helmholtz-Zentrum Berlin) & Ashis Ravindran (DKFZ, Heidelberg)
+#
+# SPDX-License-Identifier: MIT
+
 __author__ = "Edgar Nandayapa (HZB), Ashis Ravindran (DKFZ)"
 __version__ = "20.01.2023"
 __status__ = "Production"
