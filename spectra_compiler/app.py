@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Edgar Nandayapa (Helmholtz-Zentrum Berlin) & Ashis Ravindran (DKFZ, Heidelberg)
+#
+# SPDX-License-Identifier: MIT
+
 import os
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout, QApplication

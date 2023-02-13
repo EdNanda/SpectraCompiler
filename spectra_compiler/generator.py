@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Edgar Nandayapa (Helmholtz-Zentrum Berlin) & Ashis Ravindran (DKFZ, Heidelberg)
+#
+# SPDX-License-Identifier: MIT
+
 from queue import Empty
 import numpy as np
 import time
