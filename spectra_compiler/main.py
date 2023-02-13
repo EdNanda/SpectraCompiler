@@ -1,7 +1,6 @@
 __author__ = "Edgar Nandayapa (HZB), Ashis Ravindran (DKFZ)"
 __version__ = "20.01.2023"
 __status__ = "Production"
-__maintainer__ = "place holder"
 
 import sys
 from multiprocessing import Queue, Pipe

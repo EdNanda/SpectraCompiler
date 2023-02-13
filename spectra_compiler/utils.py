@@ -4,6 +4,10 @@ import socket
 
 
 def get_host_name() -> str:
+    """
+
+    @return: pc name
+    """
     return socket.gethostname()
 
 
@@ -22,7 +26,7 @@ def array_for_scrollbar(min_val=0.06, max_val=2, factor=0.385, max_bar=99) -> li
 
 def LEskip_positive_number(string_val: str) -> str:
     """
-    ## Makes sure that number of skipped measurements is a positive integer
+    #  Makes sure that number of skipped measurements is a positive integer
     :param self:
     :return:
     """
@@ -37,6 +41,17 @@ def LEskip_positive_number(string_val: str) -> str:
 
 
 def spectra_math(ydata: np.ndarray, is_dark_data, is_bright_data, dark_mean, bright_mean) -> np.ndarray:
+    """
+    Do necessary math to spectra with respect to what has been selected:
+    Using bright_data as a top limit, spectra is normalized to 1
+    dark_data is subtracted from raw spectra
+    @param ydata: list of raw spectra data
+    @param is_dark_data: boolean for dark data
+    @param is_bright_data: boolean for bright data
+    @param dark_mean: list of dark data
+    @param bright_mean: list of bright data
+    @return: list of calculated spectra
+    """
     if is_dark_data and not is_bright_data:
         yarray = (ydata - dark_mean)
     elif is_bright_data and not is_dark_data:

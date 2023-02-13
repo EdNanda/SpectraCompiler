@@ -25,13 +25,14 @@ class SpectroProcess(Process):
             self.xdata = _spec.wavelengths()[2:]
             self.array_size = len(self.xdata)
             self.is_model_verified = (self.MODEL_NAME in _spec.serial_number)
-            # print("spec found")
         else:
             self.array_size = 2046
             self.xdata = np.linspace(340, 1015, self.array_size)
-            # print("spec not found")
 
     def reinit_spectrometer_generator(self):
+        """
+        Look for a spectrometer connected to the computer
+        """
         try:
             self.spec = sp.Spectrometer.from_first_available()
             self.spec.integration_time_micros(200000)
@@ -39,9 +40,11 @@ class SpectroProcess(Process):
             print("Spectrometer couldn't be initialized.")
 
     def run(self):
+        """
+        Initial spectrometer setup.
+        If not found, make some random data with a gaussian shape
+        """
         def accurate_delay(delay):
-            ''' Function to provide accurate time delay in millisecond
-            '''
             _ = time.perf_counter() + delay / 1000
             while time.perf_counter() < _:
                 pass
@@ -76,7 +79,6 @@ class SpectroProcess(Process):
                     inttime = self.data_from_mother.get_nowait()
                     if inttime:
                         inttime *= 1000  # convert to ms
-                        # print("wait time changed (ms)", inttime)
                     else:
                         break
                 except Empty:
