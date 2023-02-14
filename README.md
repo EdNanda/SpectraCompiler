@@ -1,5 +1,5 @@
 # Spectra Compiler
-Graphical Interface based on pyqt that allows the user to collect multiple spectra from Ocean Optic spectrometers [link] https://www.oceaninsight.com/products/spectrometers/
+Graphical Interface based on pyqt that allows the user to collect multiple spectra from Ocean Optic spectrometers [link](https://www.oceaninsight.com/products/spectrometers/)
 
 
 ## Description
@@ -9,24 +9,22 @@ Additionally, you can remove background spectra with the "Dark measurement" opti
 Furthermore, one can add a large amount of relevant metadata for future automated analysis.
 
 ## Installation
-Install the official Ocean Optics [drivers] (https://www.oceaninsight.com/products/software/)
+Install the official Ocean Optics [drivers](https://www.oceaninsight.com/products/software/)
 
-Install the libraries shown in the requirements.txt, by
+Install the libraries shown in the requirements.txt
 
 ```bash
-pip install pyqt=5.12.3
-pip install seabreeze
+pip install .\requirements.txt
 ```
 
-or if using anaconda
+If using anaconda, make sure pyqt is installed through conda
 
 ```bash
 conda install -c anaconda pyqt=5.12.3
-conda install -c conda-forge seabreeze
 ```
 
 ## Usage
-When running the code, a graphical interface will appear. If a spectrometer is recognized, you will immediatly see the current spectrum. Otherwise, you will see a demo signal in the shape of a gaussian.
+When running the code, a graphical interface will appear. If a spectrometer is recognized, you will immediately see the current spectrum. Otherwise, you will see a demo signal in the shape of a gaussian.
 
 To start a measurement, simply press start.
 
@@ -43,11 +41,11 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 Please make sure to update tests as appropriate.
 
 ## Authors and acknowledgment
-All programming was done by Edgar Nandayapa B.
-Field testing has been done by C. Rehermann and F. Mathies.
+All programming was done by Edgar Nandayapa (Helmholtz-Zentrum Berlin, Germany) and Ashis Ravindran (Deutsches Krebsforschungszentrum, Heidelberg, Germany).
+Field testing has been done by C. Rehermann (Helmholtz-Zentrum Berlin, Germany) and F. Mathies (Helmholtz-Zentrum Berlin, Germany).
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
 
 ## Known issues
-When "Skip # measurements" is other than 1, empty columns appear on the output datafile, creating issues when trying to open it with programs like excel or origin.
+No known issues
