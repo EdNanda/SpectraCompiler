@@ -1,0 +1,42 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: >-
+  Spectra Compiler: Tool for gathering spectra from a
+  photoluminescence spectrometer
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - orcid: 'https://orcid.org/0000-0002-5248-7143'
+    given-names: Edgar R.
+    family-names: Nandayapa
+    name-suffix: Dr
+    email: enandayapa@gmail.com
+    affiliation: Helmholtz-Zentrum Berlin
+  - given-names: Ashis
+    family-names: Ravindran
+    email: ashis.ravindran@dkfz-heidelberg.de
+    affiliation: 'DKFZ, Heidelberg'
+    orcid: 'https://orcid.org/0000-0003-2942-6235'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.7639465
+repository-code: 'https://github.com/EdNanda/SpectraCompiler'
+repository: 'https://codebase.helmholtz.cloud/hyd/spectra-compiler'
+abstract: >-
+  This program allows you to collect data from Ocean Insight
+  spectrometers and other brands. One can change the basic
+  controls of the spectrometer, like the integration time
+  and the number of measurements. Additionally, you can
+  remove background spectra with the "Dark measurement"
+  option and do absorption measurements with the "Bright
+  measurement" button. Furthermore, one can add a large
+  amount of relevant metadata for future automated analysis.
+keywords:
+  - 'Python, spectra, photoluminescence, PL, spectroscopy'
+license: MIT
+version: 1.0.0
+date-released: '2023-02-14'
