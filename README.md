@@ -1,6 +1,7 @@
 # Spectra Compiler
-Graphical Interface based on pyqt that allows the user to collect multiple spectra from Ocean Optic spectrometers [link](https://www.oceaninsight.com/products/spectrometers/)
+Graphical Interface based on pyqt that allows the user to collect multiple spectra from Ocean Optic spectrometers [link](https://www.oceaninsight.com/products/spectrometers/).
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7639465.svg)](https://doi.org/10.5281/zenodo.7639465)
 
 ## Description
 This program allows you to collect data from Ocean Insight spectrometers and other brands. 
