@@ -7,7 +7,12 @@ build_executable:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller spectra_compiler
+    - pyinstaller \
+      --add-data spectra_compiler/app.py \
+      --add-data spectra_compiler/generator.py \
+      --add-data spectra_compiler/utils.py \
+      --add-data spectra_compiler/workers.py \
+      spectra_compiler/main.py
 
   artifacts:
     paths:
