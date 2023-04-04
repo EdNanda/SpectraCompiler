@@ -4,6 +4,11 @@ build_executable:
   image: python:3.7
 
   script:
-  - pip install --upgrade pip
-  - pip install -U pyinstaller
-  - pyinstaller spectra-compiler/main.py
+    - pip install --upgrade pip
+    - pip install -U pyinstaller
+    - pyinstaller spectra-compiler/main.py
+
+  artifacts:
+    paths:
+      - build/
+      - dist/
