@@ -5,6 +5,7 @@ build_executable:
 
   script:
     - pip install --upgrade pip
+    - pip install -r requirements.txt
     - pip install -U pyinstaller
     - pyinstaller spectra_compiler/main.py
 
