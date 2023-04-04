@@ -61,7 +61,8 @@ def spectra_math(ydata: np.ndarray, is_dark_data, is_bright_data, dark_mean, bri
     elif is_bright_data and not is_dark_data:
         yarray = ydata / bright_mean
     elif is_bright_data and is_dark_data:
-        yarray = 1 - np.divide((ydata - dark_mean), (bright_mean - dark_mean) + 1e-6)
+        # yarray = 1 - np.divide((ydata - dark_mean), (bright_mean - dark_mean) + 1e-6) # Transmittance
+        yarray = -1 * np.log(np.divide((ydata - dark_mean), (bright_mean - dark_mean))) # Absorbance
     else:
         return ydata
     return yarray

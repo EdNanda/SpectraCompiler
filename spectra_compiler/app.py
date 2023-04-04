@@ -126,7 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layV1.addLayout(LBgrid)
 
         #  Add first vertical layout to the main horizontal one
-        layH1.addLayout(layV1, 5)
+        layH1.addLayout(layV1, 8)
 
         # # Make second vertical layout for measurement settings
         layV2 = QtWidgets.QVBoxLayout()
