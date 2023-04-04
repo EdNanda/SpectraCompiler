@@ -7,7 +7,7 @@ build_executable:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller main.py
+    - pyinstaller --onefile --icon resources/rainbow.ico main.py
 
   artifacts:
     paths:
