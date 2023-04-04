@@ -8,10 +8,10 @@ build_executable:
     - pip install -r requirements.txt
     - pip install -U pyinstaller
     - pyinstaller
-      --add-data spectra_compiler/app.py
-      --add-data spectra_compiler/generator.py
-      --add-data spectra_compiler/utils.py
-      --add-data spectra_compiler/workers.py
+      --add-data spectra_compiler/app.py:.
+      --add-data spectra_compiler/generator.py:.
+      --add-data spectra_compiler/utils.py:.
+      --add-data spectra_compiler/workers.py:.
       spectra_compiler/main.py
 
   artifacts:
