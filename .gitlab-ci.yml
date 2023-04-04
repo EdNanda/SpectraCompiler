@@ -7,7 +7,7 @@ build_executable:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller spectra_compiler/main.py
+    - pyinstaller spectra_compiler
 
   artifacts:
     paths:
