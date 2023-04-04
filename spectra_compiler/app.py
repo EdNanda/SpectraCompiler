@@ -23,9 +23,9 @@ import pandas as pd
 import numpy as np
 from time import time, strftime, localtime
 from datetime import datetime
-import utils
+from spectra_compiler import utils
 import pathlib
-from workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
+from spectra_compiler.workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
 
 
 class MplCanvas(FigureCanvasQTAgg):

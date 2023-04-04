@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 
-import utils
+from spectra_compiler import utils
 import numpy as np
 from PyQt5.QtCore import QTimer
 from multiprocessing import Pipe
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
-from generator import SpectraReading
+from spectra_compiler.generator import SpectraReading
 
 
 class Emitter(QThread):
