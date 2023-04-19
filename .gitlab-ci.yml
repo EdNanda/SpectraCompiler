@@ -1,7 +1,7 @@
 
 build_executable_linux:
   stage: build
-  image: python:3.7
+  image: python:3.11
 
   script:
     - pip install --upgrade pip
@@ -16,7 +16,7 @@ build_executable_linux:
 
 build_executable_windows:
   stage: build
-  image: python:3.12
+  image: python:3.11
 
   tags:
     - windows
