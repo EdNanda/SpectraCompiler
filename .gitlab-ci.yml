@@ -42,6 +42,6 @@ build_executable_windows:
     - pyinstaller --icon resources/rainbow.ico --onefile main.py
 
   artifacts:
-  paths:
-    - build/
-    - dist/
+    paths:
+      - build/
+      - dist/
