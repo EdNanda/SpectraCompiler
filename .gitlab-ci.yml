@@ -1,5 +1,5 @@
 
-build_executable:
+build_executable_linux:
   stage: build
   image: python:3.7
 
@@ -13,3 +13,16 @@ build_executable:
     paths:
       - build/
       - dist/
+
+build_executable_windows:
+  stage: build
+  image: python:3.12
+
+  tags:
+    - windows
+
+  script:
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -U pyinstaller
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py
