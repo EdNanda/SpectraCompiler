@@ -10,7 +10,7 @@ build_executable_linux:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
   artifacts:
     paths:
@@ -39,7 +39,7 @@ build_executable_windows:
     - C:\Python\python.exe -m pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
   artifacts:
     paths:
