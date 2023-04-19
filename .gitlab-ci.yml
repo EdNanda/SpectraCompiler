@@ -22,7 +22,7 @@ build_executable_windows:
     - windows
 
   script:
-    - pip install --upgrade pip
+    - C:\Python\python.exe -m pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py
