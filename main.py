@@ -7,15 +7,16 @@ __version__ = "20.01.2023"
 __status__ = "Production"
 
 import sys
-from multiprocessing import Queue, Pipe
+from multiprocessing import Queue, Pipe, freeze_support
 from PyQt5 import QtWidgets
-from app import MainWindow
+from spectra_compiler.app import MainWindow
 import pathlib
-from generator import SpectroProcess
-from workers import Emitter
+from spectra_compiler.generator import SpectroProcess
+from spectra_compiler.workers import Emitter
 
 if __name__ == "__main__":
-    icon_path = '../resources/rainbow.ico'
+    freeze_support()  # Required when doing multiprocessing on Windows
+    icon_path = 'resources/rainbow.ico'
     icon_path = pathlib.Path(icon_path)
     app = QtWidgets.QApplication(sys.argv)
 
