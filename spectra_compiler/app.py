@@ -254,6 +254,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.exp_vars = []
         self.glv_labels = ["Temperature ('C)", "Water content (ppm)", "Oxygen content (ppm)"]
         self.glv_vars = []
+        self.photoLu_labels = ["Long pass filter", "Short pass filter", "Light source"]
+        self.photoLu_vars = []
+        self.spinCo_labels = ["Speed (rpm)", "Acceleration (rpm/s)", "Antisolvent time (s)", "Antisolvent Chemistry"]
+        self.spinCo_vars = []
 
         self.setup_labs = ["Sample", "User", "Folder", "Integration Time (s)", "Delay time (s)",
                            "Measurement length (s)",
@@ -279,6 +283,20 @@ class MainWindow(QtWidgets.QMainWindow):
             # Evar.setMaximumWidth(120)
             LmDataBox.addRow(eb, Evar)
             self.glv_vars.append(Evar)
+        LmDataBox.addRow(" ", QFrame())
+        LmDataBox.addRow(QLabel('PL VARIABLES'))
+        for eb in self.photoLu_labels:
+            Evar = QLineEdit()
+            # Evar.setMaximumWidth(120)
+            LmDataBox.addRow(eb, Evar)
+            self.photoLu_vars.append(Evar)
+        LmDataBox.addRow(" ", QFrame())
+        LmDataBox.addRow(QLabel('SPIN-COATING VARIABLES'))
+        for eb in self.spinCo_labels:
+            Evar = QLineEdit()
+            # Evar.setMaximumWidth(120)
+            LmDataBox.addRow(eb, Evar)
+            self.spinCo_vars.append(Evar)
         self.com_labels = QTextEdit()
         self.com_labels.setMaximumHeight(50)
         self.com_labels.setMaximumWidth(120)
@@ -419,9 +437,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         folder = self.LEfolder.text()
         metafile = QtWidgets.QFileDialog.getOpenFileName(self, "Choose your metadata file", folder)
-        metadata = pd.read_csv(metafile[0], header=None, index_col=0, squeeze=True, nrows=21)
-        labels = self.setup_labs + self.exp_labels
-        objects = self.setup_vals + self.exp_vars
+        metadata = pd.read_csv(metafile[0], header=None, index_col=0).T
+        labels = self.setup_labs + self.exp_labels + self.photoLu_labels + self.spinCo_labels
+        objects = self.setup_vals + self.exp_vars + self.photoLu_vars + self.spinCo_vars
 
         for cc, oo in enumerate(objects):
             if labels[cc] == "Sample":
@@ -433,8 +451,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     except:
                         oo.setText(str(metadata["Material"]))
                 else:
-                    oo.setText(str(metadata[labels[cc]]))
-        self.LEfolder.setText(metadata["Folder"])
+                    oo.setText(str(metadata[labels[cc]].values[0]))
+        self.LEfolder.setText(metadata["Folder"].values[0])
 
         self.statusBar().showMessage("Metadata successfully loaded", 5000)
 
@@ -445,8 +463,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sample = self.LEsample.text()
         self.meta_dict = {}  #  All variables will be collected here
 
-        all_metaD_labs = self.setup_labs + self.exp_labels + self.glv_labels
-        all_metaD_vals = self.setup_vals + self.exp_vars + self.glv_vars
+        all_metaD_labs = self.setup_labs + self.exp_labels + self.glv_labels + self.photoLu_labels + self.spinCo_labels
+        all_metaD_vals = self.setup_vals + self.exp_vars + self.glv_vars + self.photoLu_vars + self.spinCo_vars
 
         try:  # Add data to dictionary
             self.meta_dict["Date"] = strftime("%H:%M:%S - %d.%m.%Y", localtime(self.start_time))
@@ -557,6 +575,8 @@ class MainWindow(QtWidgets.QMainWindow):
         metadata = pd.DataFrame.from_dict(self.meta_dict, orient='index')
         wave = pd.DataFrame({"Wavelength (nm)": self.xdata})
 
+        time_meas_array = np.round(time_meas_array,4)
+
         if self.Braw.isChecked():
             PLspecR = pd.DataFrame(spectra_raw_array.T, columns=time_meas_array)
             if self.is_dark_data:
@@ -577,8 +597,9 @@ class MainWindow(QtWidgets.QMainWindow):
             PLspec = pd.DataFrame(spectra.T, columns=time_meas_array)
             spectral_data = pd.concat([wave, PLspec], axis=1, join="inner")
 
-        #  Remove all unused columns
+        #  Remove all unused columns and simplify
         spectral_data = spectral_data.dropna(axis=1, how="all")
+        spectral_data = spectral_data.round(1)
         filename = self.folder + self.sample + "_PL_measurement.csv"
         metadata.to_csv(filename, header=False)
         spectral_data.to_csv(filename, mode="a", index=False)
