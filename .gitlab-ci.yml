@@ -1,7 +1,7 @@
 
 build_executable_linux:
   stage: build
-  image: python:3.10
+  image: python:3.12
 
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
