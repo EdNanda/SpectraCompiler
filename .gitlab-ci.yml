@@ -1,7 +1,10 @@
 
+default:
+  image: python:3.12.0b2 
+
 build_executable_linux:
   stage: build
-  image: python:3.12.0b2
+#  image: python:3.12.0b2
 
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
@@ -19,7 +22,7 @@ build_executable_linux:
 
 build_executable_windows:
   stage: build
-  image: python:3.10
+#  image: python:3.12.0b2
 
   tags:
     - windows
