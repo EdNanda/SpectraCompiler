@@ -53,9 +53,8 @@ build_executable_windows:
     - pyinstaller spectra-compiler.spec
 
   artifacts:
-    when: on_failure
-      paths:
-        - spectra-compiler.spec
+    when: always  
     paths:
+      - spectra-compiler.spec
       - build/
       - dist/
