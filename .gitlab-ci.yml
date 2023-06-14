@@ -35,6 +35,7 @@ build_executable_windows:
     - choco install python311 -y
     - dir c:\python311            # See if python installed correctly
     - dir c:\python311\scripts    # See if pip is available
+    - refreshenv
     # Install requirements for seabreeze
   #  - choco install visualcpp-build-tools -y
   #  - choco install windows-sdk-10.1 -y
