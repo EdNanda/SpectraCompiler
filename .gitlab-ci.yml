@@ -1,10 +1,9 @@
 
 default:
+  stage: build
   image: python:3.11
 
 build_executable_linux:
-  stage: build
-
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
     - apt-get update
@@ -21,6 +20,7 @@ build_executable_linux:
 
 build_executable_windows:
   stage: build
+  image: chocolatey/choco
 
   tags:
     - windows
@@ -31,7 +31,8 @@ build_executable_windows:
     # - Set-ExecutionPolicy Bypass -Scope Process -Force  # not required, execution policy already is "bypass"
   #  - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
     # Update chocolatey
-  #  - choco upgrade chocolatey
+    - choco upgrade chocolatey
+    - choco install python311
     # Install requirements for seabreeze
   #  - choco install visualcpp-build-tools -y
   #  - choco install windows-sdk-10.1 -y
