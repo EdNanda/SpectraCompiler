@@ -35,6 +35,9 @@ build_executable_windows:
     - choco install python311 -y
     - dir c:\python311            # See if python installed correctly
     - dir c:\python311\scripts    # See if pip is available
+
+    # Update the environment to recognize new commands
+    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
     - refreshenv
     # Install requirements for seabreeze
   #  - choco install visualcpp-build-tools -y
