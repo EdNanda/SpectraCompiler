@@ -1,9 +1,9 @@
 
 default:
-  stage: build
   image: python:3.11
 
 build_executable_linux:
+  stage: build
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
     - apt-get update
