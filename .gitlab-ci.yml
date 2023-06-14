@@ -33,12 +33,13 @@ build_executable_windows:
     # Update chocolatey
     - choco upgrade chocolatey
     - choco install python311 -y
+    - choco install pip -y
     # Install requirements for seabreeze
   #  - choco install visualcpp-build-tools -y
   #  - choco install windows-sdk-10.1 -y
   #  - choco install windowsdriverkit10 -y
     # Updating pip
-    - pip install --upgrade pip
+    - c:\python311\python.exe pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
