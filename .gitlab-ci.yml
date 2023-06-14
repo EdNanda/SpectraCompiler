@@ -50,7 +50,7 @@ build_executable_windows:
 
     # Build the spec-file in separate step according to https://pyinstaller.org/en/stable/spec-files.html
     - pyi-makespec --icon resources/rainbow.ico --onefile --name spectra-compiler main.py
-    - pyinstaller main.spec
+    - pyinstaller spectra-compiler.spec
 
   artifacts:
     paths:
