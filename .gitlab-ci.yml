@@ -47,7 +47,10 @@ build_executable_windows:
     - pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+
+    # Build the spec-file in separate step according to https://pyinstaller.org/en/stable/spec-files.html
+    - pyi-makespec --icon resources/rainbow.ico --onefile --name spectra-compiler main.py
+    - pyinstaller --icon resources/rainbow.ico --onefile --name spectra-compiler main.spec
 
   artifacts:
     paths:
