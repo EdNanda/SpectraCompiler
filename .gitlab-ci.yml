@@ -1,42 +1,42 @@
-
-build_executable_linux:
-  stage: build
-  image: python:3.10
-
-  script:
-    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    - apt-get update
-    - apt-get -y install build-essential libusb-dev
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install -U pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-
-  artifacts:
-    paths:
-      - build/
-      - dist/
+#build_executable_linux:
+#  stage: build
+#  image: python:3.10
+#
+#  script:
+#    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
+#    - apt-get update
+#    - apt-get -y install build-essential libusb-dev
+#    - pip install --upgrade pip
+#    - pip install -r requirements.txt
+#    - pip install -U pyinstaller
+#    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+#
+#  artifacts:
+#    paths:
+#      - build/
+#      - dist/
 
 build_executable_windows:
   stage: build
-  image: python:3.10
+  image: registry.hzdr.de/tfoerster-projects/containers/wincompiler:latest
 
   tags:
     - windows
 
   script:
+    - bash
     # Install Chocolatey
-    - Get-ExecutionPolicy
+    #- Get-ExecutionPolicy
     # - Set-ExecutionPolicy Bypass -Scope Process -Force  # not required, execution policy already is "bypass"
-    - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+    #- "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
     # Update chocolatey
     - choco upgrade chocolatey
     # Install requirements for seabreeze
-    - choco install visualcpp-build-tools -y
+    #- choco install visualcpp-build-tools -y
     - choco install windows-sdk-10.1 -y
     - choco install windowsdriverkit10 -y
     # Updating pip
-    - C:\Python\python.exe -m pip install --upgrade pip
+    - python -m pip install --upgrade pip
     - pip install -r requirements.txt
     - pip install -U pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
