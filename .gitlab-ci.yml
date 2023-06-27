@@ -1,20 +1,21 @@
-#build_executable_linux:
-#  stage: build
-#  image: python:3.10
-#
-#  script:
-#    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-#    - apt-get update
-#    - apt-get -y install build-essential libusb-dev
-#    - pip install --upgrade pip
-#    - pip install -r requirements.txt
-#    - pip install -U pyinstaller
-#    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-#
-#  artifacts:
-#    paths:
-#      - build/
-#      - dist/
+build_executable_linux:
+  stage: build
+  image: python:3.11
+
+  script:
+    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
+    - apt-get update
+    - apt-get -y install build-essential libusb-dev
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -U pyinstaller
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+
+  artifacts:
+    paths:
+      - build/
+      - dist/
+
 
 build_executable_windows:
   stage: build
@@ -26,10 +27,9 @@ build_executable_windows:
   script:
     - bash
     - choco upgrade chocolatey
-    # Updating pip
     - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install -U pyinstaller
+    - pip install --requirement requirements.txt
+    - pip install --upgrade pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
   artifacts:
