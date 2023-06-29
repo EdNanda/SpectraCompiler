@@ -1,7 +1,6 @@
-
 build_executable_linux:
   stage: build
-  image: python:3.10
+  image: python:3.11
 
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
@@ -17,28 +16,20 @@ build_executable_linux:
       - build/
       - dist/
 
+
 build_executable_windows:
   stage: build
-  image: python:3.10
+  image: registry.hzdr.de/examples/docker-examples/chocolatey:python3.11
 
   tags:
     - windows
 
   script:
-    # Install Chocolatey
-    - Get-ExecutionPolicy
-    # - Set-ExecutionPolicy Bypass -Scope Process -Force  # not required, execution policy already is "bypass"
-    - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-    # Update chocolatey
+    - bash
     - choco upgrade chocolatey
-    # Install requirements for seabreeze
-    - choco install visualcpp-build-tools -y
-    - choco install windows-sdk-10.1 -y
-    - choco install windowsdriverkit10 -y
-    # Updating pip
-    - C:\Python\python.exe -m pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install -U pyinstaller
+    - pip install --upgrade pip
+    - pip install --requirement requirements.txt
+    - pip install --upgrade pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
   artifacts:
