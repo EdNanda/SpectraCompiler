@@ -16,7 +16,7 @@ from spectra_compiler.workers import Emitter
 
 if __name__ == "__main__":
     freeze_support()  # Required when doing multiprocessing on Windows
-    icon_path = 'resources/rainbow.ico'
+    icon_path = '../resources/rainbow.ico'
     icon_path = pathlib.Path(icon_path)
     app = QtWidgets.QApplication(sys.argv)
 

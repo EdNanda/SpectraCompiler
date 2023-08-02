@@ -6,7 +6,7 @@ import os
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QWidget, QLineEdit, QFormLayout, QHBoxLayout, QSpacerItem, QGridLayout, QApplication
 from PyQt5.QtWidgets import QFrame, QPushButton, QCheckBox, QLabel, QToolButton, QTextEdit, QScrollBar
-from PyQt5.QtWidgets import QSizePolicy, QMessageBox
+from PyQt5.QtWidgets import QSizePolicy, QMessageBox, QDialog, QVBoxLayout,QTextBrowser
 from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
@@ -27,6 +27,21 @@ from spectra_compiler import utils
 import pathlib
 from spectra_compiler.workers import PlotWorker, SpectraGatherer, DarkBrightGatherer
 
+class InfoDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        info_browser = QTextBrowser()
+        info_browser.setOpenExternalLinks(True)
+        info_text = (
+            "<p>Software tested with OceanInsights spectrometers.</p>"
+            "<p>Created by Edgar Nandayapa (Helmholtz-Zentrum Berlin) with support of Ashis Ravindran (Deutsches Krebsforschungszentrum).</p>"
+            "<p>If you find this software useful, please cite it <a href='https://codebase.helmholtz.cloud/hyd/spectra-compiler/-/blob/main/CITATION.bib'>DOI:10.5281/zenodo.7639465</a>.</p>"
+            "<p>The latest version of the program can be found at <a href='https://codebase.helmholtz.cloud/hyd/spectra-compiler'>https://codebase.helmholtz.cloud/hyd/spectra-compiler</a>.</p>"
+
+        )
+        info_browser.setHtml(info_text)
+        layout.addWidget(info_browser)
 
 class MplCanvas(FigureCanvasQTAgg):
     '''
@@ -109,15 +124,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Brange = QCheckBox("Fix y-axis")  #  Button to select visualization
         self.BSavePlot = QCheckBox("Create heatplot")
         self.BSavePlot.setChecked(True)
+        self.info_button = QPushButton("\U0001F6C8")
+        self.info_button.setFixedSize(25, 25)
+        self.info_button.setStyleSheet("text-align: center; font-size: 18px;")
 
         # # Place all widgets
         #  First in a grid
         LBgrid = QGridLayout()
         LBgrid.addWidget(QLabel(" "), 0, 0)
-        LBgrid.addWidget(self.Braw, 0, 1)
-        LBgrid.addWidget(self.Brange, 0, 2)
-        LBgrid.addWidget(self.BSavePlot, 0, 3)
-        LBgrid.addWidget(QLabel(" "), 0, 4)
+        LBgrid.addWidget(QLabel(" "), 0, 1)
+        LBgrid.addWidget(self.Braw, 0, 2)
+        LBgrid.addWidget(self.Brange, 0, 3)
+        LBgrid.addWidget(self.BSavePlot, 0, 4)
+        LBgrid.addWidget(QLabel(" "), 0, 5)
+        LBgrid.addWidget(self.info_button, 0, 6)
+        LBgrid.setAlignment(self.info_button, Qt.AlignRight)
         #  Add to (first) vertical layout
         layV1 = QtWidgets.QVBoxLayout()
         #  Add Widgets to the layout
@@ -351,6 +372,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Braw.stateChanged.connect(self.refresh_plot)
         self.BBrightDel.clicked.connect(self.delete_bright_measurement)
         self.BDarkDel.clicked.connect(self.delete_dark_measurement)
+        self.info_button.clicked.connect(self.show_info)
+
+    def show_info(self):
+        dialog = InfoDialog(self)
+        dialog.setWindowTitle("About the Software")
+        dialog.setWindowModality(Qt.ApplicationModal)
+        dialog.exec_()
 
     @pyqtSlot()
     def select_folder(self):
