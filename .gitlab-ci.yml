@@ -26,7 +26,7 @@ build_executable_windows:
 
   script:
     - bash
-    - choco upgrade chocolatey
+    - choco upgrade chocolatey -y
     - pip install --upgrade pip
     - pip install --requirement requirements.txt
     - pip install --upgrade pyinstaller
