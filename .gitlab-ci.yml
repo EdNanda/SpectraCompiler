@@ -1,5 +1,4 @@
 stages:
-  - buildA
   - buildB
 
 build_executable_linux:
@@ -56,8 +55,6 @@ build_executable_windows_test:
     - setx path "C:\\Program Files\\Git\\bin;%path%"
 
   script:
-    - bash
-    - choco upgrade chocolatey -y
     - pip install --upgrade pip
     - pip install --requirement requirements.txt
     - pip install --upgrade pyinstaller
