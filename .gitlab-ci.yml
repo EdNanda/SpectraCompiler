@@ -55,10 +55,10 @@ build_executable_windows_test:
     - setx path "C:\\Program Files\\Git\\bin;%path%"
 
   script:
-    - pip install --upgrade pip
-    - pip install --requirement requirements.txt
-    - pip install --upgrade pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+    - powershell "pip install --upgrade pip"
+    - powershell "pip install --requirement requirements.txt"
+    - powershell "pip install --upgrade pyinstaller"
+    - powershell "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
 
   artifacts:
     paths:
