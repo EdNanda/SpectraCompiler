@@ -53,12 +53,13 @@ build_executable_windows_test:
     - "choco install python -y"
     - "choco install git -y"
     - setx path "C:\\Program Files\\Git\\bin;%path%"
+    - "C:\\Python311\\python.exe -m pip install --upgrade pip build"
 
   script:
-    - powershell "pip install --upgrade pip"
-    - powershell "pip install --requirement requirements.txt"
-    - powershell "pip install --upgrade pyinstaller"
-    - powershell "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
+    - "pip install --upgrade pip"
+    - "pip install --requirement requirements.txt"
+    - "pip install --upgrade pyinstaller"
+    - "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
 
   artifacts:
     paths:
