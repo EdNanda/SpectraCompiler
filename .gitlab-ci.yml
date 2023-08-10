@@ -1,3 +1,7 @@
+stages:
+  - "build"
+  - "buildB"
+
 build_executable_linux:
   stage: build
   image: python:3.11
@@ -19,7 +23,7 @@ build_executable_linux:
 
 build_executable_windows:
   stage: build
-  image: registry.hzdr.de/examples/docker-examples/chocolatey:python3.11
+  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
 
   tags:
     - windows
@@ -36,3 +40,34 @@ build_executable_windows:
     paths:
       - build/
       - dist/
+
+build_executable_windows_test:
+  stage: buildB
+  image: mcr.microsoft.com/dotnet/framework/runtime:4.8-windowsservercore-ltsc2019
+
+  tags:
+    - windows
+
+  before_script:
+    - powershell "Set-ExecutionPolicy Bypass -Scope Process -Force"
+    - powershell "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
+    - powershell "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+    - powershell "choco upgrade chocolatey"
+    - powershell "choco install python -y"
+    - powershell "choco install git -y"
+    - setx path "C:\\Program Files\\Git\\bin;%path%"
+
+  script:
+    - bash
+    - choco upgrade chocolatey -y
+    - pip install --upgrade pip
+    - pip install --requirement requirements.txt
+    - pip install --upgrade pyinstaller
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+
+  artifacts:
+    paths:
+      - build/
+      - dist/
+
+
