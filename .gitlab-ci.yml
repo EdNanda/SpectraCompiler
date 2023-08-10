@@ -1,45 +1,44 @@
 stages:
-  - "build"
   - "buildB"
 
-build_executable_linux:
-  stage: build
-  image: python:3.11
-
-  script:
-    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    - apt-get update
-    - apt-get -y install build-essential libusb-dev
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - pip install -U pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-
-  artifacts:
-    paths:
-      - build/
-      - dist/
-
-
-build_executable_windows:
-  stage: build
-  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
-
-  tags:
-    - windows
-
-  script:
-    - bash
-    - choco upgrade chocolatey -y
-    - pip install --upgrade pip
-    - pip install --requirement requirements.txt
-    - pip install --upgrade pyinstaller
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-
-  artifacts:
-    paths:
-      - build/
-      - dist/
+    #build_executable_linux:
+    #  stage: build
+    #  image: python:3.11
+    #
+    #  script:
+    #    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
+    #    - apt-get update
+    #    - apt-get -y install build-essential libusb-dev
+    #    - pip install --upgrade pip
+    #    - pip install -r requirements.txt
+    #    - pip install -U pyinstaller
+    #    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+    #
+    #  artifacts:
+    #    paths:
+    #      - build/
+    #      - dist/
+    #
+    #
+    #build_executable_windows:
+    #  stage: build
+    #  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+    #
+    #  tags:
+    #    - windows
+    #
+    #  script:
+    #    - bash
+    #    - choco upgrade chocolatey -y
+    #    - pip install --upgrade pip
+    #    - pip install --requirement requirements.txt
+    #    - pip install --upgrade pyinstaller
+    #    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+    #
+    #  artifacts:
+    #    paths:
+    #      - build/
+    #      - dist/
 
 build_executable_windows_test:
   stage: buildB
@@ -49,12 +48,11 @@ build_executable_windows_test:
     - windows
 
   before_script:
-    - powershell "Set-ExecutionPolicy Bypass -Scope Process -Force"
-    - powershell "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
-    - powershell "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-    - powershell "choco upgrade chocolatey"
-    - powershell "choco install python -y"
-    - powershell "choco install git -y"
+    - "Set-ExecutionPolicy Bypass -Scope Process -Force"
+    - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
+    - "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+    - "choco install python -y"
+    - "choco install git -y"
     - setx path "C:\\Program Files\\Git\\bin;%path%"
 
   script:
