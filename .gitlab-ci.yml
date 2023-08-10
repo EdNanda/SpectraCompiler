@@ -1,9 +1,9 @@
 stages:
-  - "buildA"
-  - "buildB"
+  - buildA
+  - buildB
 
 build_executable_linux:
-  stage: build
+  stage: buildA
   image: python:3.11
 
   script:
@@ -22,7 +22,7 @@ build_executable_linux:
 
 
 build_executable_windows:
-  stage: build
+  stage: buildA
   image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
 
   tags:
