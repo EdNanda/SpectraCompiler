@@ -6,11 +6,12 @@ build_linux_package:
   image: python:3.11
 
   script:
+    # Requirements for the Qt build
+    - apt-get update
+    - apt-get install -y libgl1-mesa-glx
     # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
-    # Requirements for the Qt build
-    - apt-get install libgl1-mesa-glx
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
     #- apt-get update
     #- apt-get -y install build-essential libusb-dev
@@ -57,6 +58,7 @@ build_macos_package:
     - macos
   
   script:
+    - brew install distribute
     - easy_install pip
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
