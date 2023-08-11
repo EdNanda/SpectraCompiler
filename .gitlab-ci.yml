@@ -1,14 +1,23 @@
-build_executable_linux:
+stages:
+  - build
+
+build_linux_package:
   stage: build
   image: python:3.11
 
   script:
-    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
+    # Install Requiremented package (Debian)
     - apt-get update
-    - apt-get -y install build-essential libusb-dev
+    - apt-get install -y libgl1 libegl1 libdbus-1-3 
+    - apt-get install -y libwayland-cursor0 libwayland-client0  libwayland-egl1
+    - apt-get install -y libxkbcommon0 libxcomposite1
+    - apt-get install -y libxcb-icccm4 libxcb-image0 libxcb1 libxcb-keysyms1 libxcb-xkb1 libxcb-shape0 libxcb-xinerama0
+    - apt-get install -y libgtk-3-0 libatk1.0-0
+    - apt-get install -y libxau6 liblzma5
+    # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
+    - pip install --upgrade pyinstaller
     - pip install -r requirements.txt
-    - pip install -U pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
   artifacts:
@@ -17,21 +26,20 @@ build_executable_linux:
       - dist/
 
 
-build_executable_windows:
+build_windows_package:
   stage: build
-  image: registry.hzdr.de/examples/docker-examples/chocolatey:python3.11
-
+  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+    
   tags:
     - windows
-
+    
   script:
     - bash
-    - choco upgrade chocolatey -y
     - pip install --upgrade pip
-    - pip install --requirement requirements.txt
     - pip install --upgrade pyinstaller
+    - pip install --requirement requirements.txt
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-
+    
   artifacts:
     paths:
       - build/
