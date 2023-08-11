@@ -1,29 +1,27 @@
 stages:
-  - buildA
-  - buildB
+  - build
 
-    #build_executable_linux:
-    #  stage: buildA
-    #  image: python:3.11
-    #
-    #  script:
-    #    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    #    - apt-get update
-    #    - apt-get -y install build-essential libusb-dev
-    #    - pip install --upgrade pip
-    #    - pip install -r requirements.txt
-    #    - pip install -U pyinstaller
-    #    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-    #
-    #  artifacts:
-    #    paths:
-    #      - build/
-    #      - dist/
-    #
-    #
+build_linux_package:
+  stage: build
+  image: python:3.11
 
-build_executable_windows:
-  stage: buildA
+  script:
+    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
+    #- apt-get update
+    #- apt-get -y install build-essential libusb-dev
+    - pip install --upgrade pip
+    - pip install --upgrade pyinstaller
+    - pip install -r requirements.txt
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+
+  artifacts:
+    paths:
+      - build/
+      - dist/
+
+
+build_windows_package:
+  stage: build
   image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
     
   tags:
@@ -41,67 +39,20 @@ build_executable_windows:
       - build/
       - dist/
 
-build_executable_windows_test:
-  stage: buildB
-  image: mcr.microsoft.com/dotnet/framework/runtime:4.8-windowsservercore-ltsc2019
-
+build_macos_package:
+  stage: build
+  image: macos-medium-m1
+  
   tags:
-    - windows
-
+    - mac
+  
   script:
-    - powershell
-    
-    # Install chocolatey
-    - Set-ExecutionPolicy Bypass -Scope Process -Force
-    - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
-    - iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-    - choco install python -y
-
-    # Update the PATH variable
-    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
-    - refreshenv
-
-    # Upgrade pip
-    - python -m pip install --upgrade pip build
-
-    # Create package from repo
-    - pip install --requirement requirements.txt
+    - pip install --upgrade pip
     - pip install --upgrade pyinstaller
+    - pip install --requirement requirements.txt
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-
+    
   artifacts:
     paths:
       - build/
       - dist/
-
-
-
-
-#$ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
-#if (Test-Path($ChocolateyProfile)) {
-#  Import-Module "$ChocolateyProfile"
-#}
-
-
- #   - $env:ChocolateyInstall = "C:\ProgramData\chocolatey"
-  #  - PS C:\> $env:PATH = $env:PATH + ';' + $env:ChocolateyInstall
-
-    # Installing python
-    
-#    - "choco install git -y"
-#    - setx path "C:\\Program Files\\Git\\bin;%path%"
-#    - pow"C:\\Python311\\python.exe -m pip install --upgrade pip build"    
-#    - "C:\\Python311\\python.exe -m pip install --upgrade pip build"
-
-#  script:
-#    - powershell
-#    - pip install --upgrade pip"
-#    - "pip install --upgrade pyinstaller"
-#    - "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
-
-#  artifacts:
-#    paths:
-#      - build/
-#      - dist/
-
-
