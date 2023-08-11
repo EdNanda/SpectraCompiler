@@ -48,20 +48,30 @@ build_executable_windows_test:
 
   script:
     - powershell
-    - Set-ExecutionPolicy Bypass -Scope Process -Force
+    
+    # Install chocolatey
+    - "Set-ExecutionPolicy Bypass -Scope Process -Force"
     - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
-    - iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    - "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
     - choco install python -y
 
     # Update the PATH variable
-    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
+    - "Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
     - refreshenv
 
     # Upgrade pip
     - python -m pip install --upgrade pip build
-    - pip install --requirement requirements.txt
 
-    #$ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    # Create package from repo
+    - pip install --requirement requirements.txt
+    - pip install --upgrade pyinstaller
+    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+
+
+
+
+
+#$ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
 #if (Test-Path($ChocolateyProfile)) {
 #  Import-Module "$ChocolateyProfile"
 #}
