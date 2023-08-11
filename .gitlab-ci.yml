@@ -8,7 +8,7 @@ build_linux_package:
   script:
     # Requirements for the Qt build
     - apt-get update
-    - apt-get install -y libgl1-mesa-glx
+    - apt-get install -y libgl1 libegl1 libdbus-1-3 libwayland-cursor0 libwayland-client0 libxkbcommon0
     # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
@@ -58,6 +58,7 @@ build_macos_package:
     - macos
   
   script:
+    - brew update && brew upgrade
     - brew install distribute
     - easy_install pip
     - pip install --upgrade pip
