@@ -7,8 +7,8 @@ build_linux_package:
 
   script:
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    #- apt-get update
-    #- apt-get -y install build-essential libusb-dev
+    - apt-get update
+    - apt-get -y install build-essential libusb-dev
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     - pip install -r requirements.txt
@@ -20,24 +20,24 @@ build_linux_package:
       - dist/
 
 
-build_windows_package:
-  stage: build
-  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+#build_windows_package:
+#  stage: build
+#  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
     
-  tags:
-    - windows
+#  tags:
+#    - windows
     
-  script:
-    - bash
-    - pip install --upgrade pip
-    - pip install --upgrade pyinstaller
-    - pip install --requirement requirements.txt
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+#  script:
+#    - bash
+#    - pip install --upgrade pip
+#    - pip install --upgrade pyinstaller
+#    - pip install --requirement requirements.txt
+#    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
     
-  artifacts:
-    paths:
-      - build/
-      - dist/
+#  artifacts:
+#    paths:
+#      - build/
+#      - dist/
 
 build_macos_package:
   stage: build
@@ -47,10 +47,11 @@ build_macos_package:
     - macos-medium-m1
   
   script:
-    - pip install --upgrade pip
-    - pip install --upgrade pyinstaller
-    - pip install --requirement requirements.txt
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+     - echo "Hello world"
+    #- pip install --upgrade pip
+    #- pip install --upgrade pyinstaller
+    #- pip install --requirement requirements.txt
+    #- pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
     
   artifacts:
     paths:
