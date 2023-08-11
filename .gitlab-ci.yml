@@ -51,9 +51,10 @@ build_macos_package:
   image: macos-12
   
   tags:
-    - macos
+    - macos-medium-m1
   
   script:
+    - easy_install pip
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     - pip install --requirement requirements.txt
