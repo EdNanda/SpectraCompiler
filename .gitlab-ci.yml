@@ -50,20 +50,21 @@ build_executable_windows_test:
     - "Set-ExecutionPolicy Bypass -Scope Process -Force"
     - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
     - "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
-    - "choco install python -y"
-    - "choco install git -y"
-    - setx path "C:\\Program Files\\Git\\bin;%path%"
-    - "C:\\Python311\\python.exe -m pip install --upgrade pip build"
+    - powershell "choco install python -y"
+#    - "choco install git -y"
+#    - setx path "C:\\Program Files\\Git\\bin;%path%"
+#    - pow"C:\\Python311\\python.exe -m pip install --upgrade pip build"    
+#    - "C:\\Python311\\python.exe -m pip install --upgrade pip build"
 
   script:
-    - "pip install --upgrade pip"
-    - "pip install --requirement requirements.txt"
-    - "pip install --upgrade pyinstaller"
-    - "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
+    - powershell "pip install --upgrade pip"
+#    - "pip install --requirement requirements.txt"
+#    - "pip install --upgrade pyinstaller"
+#    - "pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler"
 
-  artifacts:
-    paths:
-      - build/
-      - dist/
+#  artifacts:
+#    paths:
+#      - build/
+#      - dist/
 
 
