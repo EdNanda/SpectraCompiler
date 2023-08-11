@@ -50,13 +50,13 @@ build_executable_windows_test:
     - powershell
     
     # Install chocolatey
-    - "Set-ExecutionPolicy Bypass -Scope Process -Force"
+    - Set-ExecutionPolicy Bypass -Scope Process -Force
     - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
-    - "iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))"
+    - iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     - choco install python -y
 
     # Update the PATH variable
-    - "Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+    - Import-Module $env:ChocolateyInstall\helpers\chocolateyProfile.psm1
     - refreshenv
 
     # Upgrade pip
