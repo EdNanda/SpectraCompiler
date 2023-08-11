@@ -12,7 +12,7 @@ build_linux_package:
     - apt-get install -y libwayland-cursor0 libwayland-client0  libwayland-egl1
     - apt-get install -y libxkbcommon0 libxcomposite1
     - apt-get install -y libxcb-icccm4 libxcb-image0 libxcb1 libxcb-keysyms1 libxcb-xkb1
-    - apt-get install -y libgtk-3-0 libgdk-3-0 libatk1.0-0
+    - apt-get install -y libgtk-3-0 libatk1.0-0
     # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
@@ -56,10 +56,10 @@ build_windows_package:
 
 build_macos_package:
   stage: build
-  image: macos-12
+  image: ghcr.io/cirruslabs/macos-ventura-base:latest
   
   tags:
-    - macos
+    - macos-medium-m1
   
   script:
     - brew update && brew upgrade
