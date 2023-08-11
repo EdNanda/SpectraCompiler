@@ -1,4 +1,5 @@
 stages:
+  - buildA
   - buildB
 
     #build_executable_linux:
@@ -20,24 +21,24 @@ stages:
     #      - dist/
     #
     #
-    #build_executable_windows:
-    #  stage: buildA
-    #  image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
-    #
-    #  tags:
-    #    - windows
-    #
-    #  script:
-    #    - bash
-    #    - pip install --upgrade pip
-    #    - pip install --upgrade pyinstaller
-    #    - pip install --requirement requirements.txt
-    #    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-    #
-    #  artifacts:
-    #    paths:
-    #      - build/
-    #      - dist/
+    build_executable_windows:
+      stage: buildA
+      image: hcr.helmholtz.cloud/examples/container-examples/wincompiler:python3.11
+    
+      tags:
+        - windows
+    
+      script:
+        - bash
+        - pip install --upgrade pip
+        - pip install --upgrade pyinstaller
+        - pip install --requirement requirements.txt
+        - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
+    
+      artifacts:
+        paths:
+          - build/
+          - dist/
 
 build_executable_windows_test:
   stage: buildB
@@ -51,7 +52,7 @@ build_executable_windows_test:
     
     # Install chocolatey
     - Set-ExecutionPolicy Bypass -Scope Process -Force
-    - [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    - "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072"
     - iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
     - choco install python -y
 
@@ -67,6 +68,10 @@ build_executable_windows_test:
     - pip install --upgrade pyinstaller
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
+  artifacts:
+    paths:
+      - build/
+      - dist/
 
 
 
