@@ -9,9 +9,9 @@ build_linux_package:
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    - apt-get update
-    - apt-get -y install build-essential libusb-dev
-    - pip install opencv-python-headless
+    #- apt-get update
+    #- apt-get -y install build-essential libusb-dev
+    #- pip install opencv-python-headless
     # Installing the package
     - pip install -r requirements.txt
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
@@ -32,9 +32,9 @@ build_windows_package:
   script:
     - bash
     # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    - choco install visualcpp-build-tools
-    - choco install windows-sdk-10.1
-    - choco install windowsdriverkit10
+    #- choco install visualcpp-build-tools
+    #- choco install windows-sdk-10.1
+    #- choco install windowsdriverkit10
     # Installing the package
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
@@ -51,7 +51,7 @@ build_macos_package:
   image: macos-12
   
   tags:
-    - macos-medium-m1
+    - macos
   
   script:
     - easy_install pip
