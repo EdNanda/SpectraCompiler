@@ -13,14 +13,10 @@ build_linux_package:
     - apt-get install -y libxkbcommon0 libxcomposite1
     - apt-get install -y libxcb-icccm4 libxcb-image0 libxcb1 libxcb-keysyms1 libxcb-xkb1 libxcb-shape0 libxcb-xinerama0
     - apt-get install -y libgtk-3-0 libatk1.0-0
+    - apt-get install -y libxau6 liblzma5
     # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
-    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    #- apt-get update
-    #- apt-get -y install build-essential libusb-dev
-    #- pip install opencv-python-headless
-    # Installing the package
     - pip install -r requirements.txt
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
 
@@ -39,35 +35,9 @@ build_windows_package:
     
   script:
     - bash
-    # Install requirements for seabreeze, see https://python-seabreeze.readthedocs.io/en/latest/install.html
-    #- choco install visualcpp-build-tools
-    #- choco install windows-sdk-10.1
-    #- choco install windowsdriverkit10
-    # Installing the package
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     - pip install --requirement requirements.txt
-    - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
-    
-  artifacts:
-    paths:
-      - build/
-      - dist/
-
-build_macos_package:
-  stage: build
-  image: ghcr.io/cirruslabs/macos-ventura-base:latest
-  
-  tags:
-    - macos-medium-m1
-  
-  script:
-    - brew update && brew upgrade
-    - brew install python
-    #- python3 -m ensurepip --upgrade
-    - pip3 install --upgrade pip
-    - pip3 install --upgrade pyinstaller
-    - pip3 install --requirement requirements.txt
     - pyinstaller --icon resources/rainbow.ico --onefile main.py --name spectra-compiler
     
   artifacts:
