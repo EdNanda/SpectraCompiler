@@ -6,9 +6,9 @@ build_linux_package:
   image: python:3.11
 
   script:
-    # Requirements for the Qt build
+    # Install Requiremented package (Debian)
     - apt-get update
-    - apt-get install -y libgl1 libegl1 libdbus-1-3 libwayland-cursor0 libwayland-client0 libxkbcommon0
+    - apt-get install -y libgl1 libegl1 libdbus-1-3 libwayland-cursor0 libwayland-client0 libxkbcommon0 libxcomposite1
     # Upgrade pip and pyinstaller   
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
@@ -59,8 +59,7 @@ build_macos_package:
   
   script:
     - brew update && brew upgrade
-    - brew install distribute
-    - easy_install pip
+    - brew install python
     - pip install --upgrade pip
     - pip install --upgrade pyinstaller
     - pip install --requirement requirements.txt
