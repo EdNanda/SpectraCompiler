@@ -41,10 +41,10 @@ build_windows_package:
 
 build_macos_package:
   stage: build
-  image: macos-medium-m1
+  image: macos-12
   
   tags:
-    - mac
+    - macos-medium-m1
   
   script:
     - pip install --upgrade pip
